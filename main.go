@@ -4,27 +4,34 @@ import (
 	"fmt"
 	"log"
 
-	// libvirt_connect "github.com/edu-cloud-api/libvirt"
+	libvirt_connection "github.com/edu-cloud-api/libvirt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
 )
+
+// Get any item from .env
+func getFromENV(item string) string {
+	value, ok := viper.Get(item).(string)
+	if !ok {
+		log.Fatalf("Error while getting item : %s", value)
+	}
+	return value
+}
 
 func main() {
 	// Setup .env file
 	viper.SetConfigFile(".env")
 	err := viper.ReadInConfig()
-
 	if err != nil {
 		log.Fatalf("Error while reading config file %s", err)
 	}
 
-	// Get value from .env
-	// value, ok := viper.Get("test").(string)
-	// if !ok {
-	// 	log.Fatal("Invalid type assertion")
-	// }
+	// Collecting variables from .env
+	AUTHNAME := getFromENV("AUTHNAME")
+	PASSPHASE := getFromENV("PASSPHASE")
 
-	// libvirt_connect.Connect_tcp()
+	// Start connection with libvirt
+	libvirt_connection.TCP_Connect(AUTHNAME, PASSPHASE)
 
 	app := fiber.New()
 
@@ -34,7 +41,6 @@ func main() {
 		return c.SendString(msg)
 	})
 
-	// Create /api group
 	api := app.Group("/api")
 
 	// GET /api/register
