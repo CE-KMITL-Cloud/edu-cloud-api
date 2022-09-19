@@ -6,7 +6,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func TCP_Connect(AUTHNAME string, PASSPHASE string) {
+func TCP_Connect(AUTHNAME string, PASSPHASE string) *libvirt.Connect {
 	/*
 		Reference link to see how function use
 		https://github.com/libvirt/libvirt-go/blob/master/integration_test.go
@@ -31,13 +31,12 @@ func TCP_Connect(AUTHNAME string, PASSPHASE string) {
 	}
 
 	// TODO: We have many URI, Store as array might be better
-	uri := "qemu+tcp://10.20.20.101/system"
+	uri := "qemu+tls://captain-2.ce.kmitl.cloud/system"
 
 	conn, err := libvirt.NewConnectWithAuth(uri, auth, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Need to close connection after process done
-	defer conn.Close()
+	return conn
 }

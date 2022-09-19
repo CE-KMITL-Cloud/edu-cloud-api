@@ -31,7 +31,11 @@ func main() {
 	PASSPHASE := getFromENV("PASSPHASE")
 
 	// Start connection with libvirt
-	libvirt_connection.TCP_Connect(AUTHNAME, PASSPHASE)
+	conn := libvirt_connection.TCP_Connect(AUTHNAME, PASSPHASE)
+	log.Println(conn)
+
+	// Need to close connection after process done
+	defer conn.Close()
 
 	app := fiber.New()
 
