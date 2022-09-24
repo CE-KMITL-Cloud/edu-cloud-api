@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	libvirt_connection "github.com/edu-cloud-api/libvirt"
+	virt_connection "github.com/edu-cloud-api/libvirt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
 )
@@ -30,8 +30,16 @@ func main() {
 	AUTHNAME := getFromENV("AUTHNAME")
 	PASSPHASE := getFromENV("PASSPHASE")
 
+	// test object
+	objConnection := virt_connection.Connection{
+		Host:      "captain-2.ce.kmitl.cloud",
+		Username:  AUTHNAME,
+		Passwd:    PASSPHASE,
+		Conn_type: "tls",
+	}
+
 	// Start connection with libvirt
-	conn := libvirt_connection.TCP_Connect(AUTHNAME, PASSPHASE)
+	conn := virt_connection.CreateCompute(objConnection)
 	log.Println(conn)
 
 	// Need to close connection after process done
