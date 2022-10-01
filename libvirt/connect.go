@@ -1,4 +1,4 @@
-package libvirt_connection
+package libvirt
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ func CreateCompute(compute Connection) *libvirt.Connect {
 	var conn *libvirt.Connect
 
 	if compute.Conn_type == "ssh" {
-		conn = ssh_connect(compute.Host, compute.Passwd)
+		conn = ssh_connect(compute.Username, compute.Host)
 	} else if compute.Conn_type == "tls" {
 		conn = tls_connect(compute.Username, compute.Passwd, compute.Host)
 	} else if compute.Conn_type == "socket" {
@@ -49,6 +49,14 @@ func socket_connect() *libvirt.Connect {
 }
 
 // TODO : need connection testing
+/*
+# command-line-arguments
+ld: warning: -no_pie is deprecated when targeting new OS versions
+(ce@10.20.20.100) Password:
+2022/10/01 23:24:13 virError(Code=38, Domain=7, Message='End of file while reading data: nc: unix connect failed: No such file or directory
+nc: /usr/local/var/run/libvirt/libvirt-sock: No such file or directory: Input/output error')
+exit status 1
+*/
 func ssh_connect(username string, host string) *libvirt.Connect {
 	// uri := "qemu+libssh2://user@host/system?known_hosts=/home/user/.ssh/known_hosts"
 	uri := fmt.Sprintf("qemu+ssh://%s@%s/system", username, host)
@@ -95,73 +103,3 @@ func tls_connect(auth_name string, passphase string, host string) *libvirt.Conne
 
 	return conn
 }
-
-func get_iface(conn *libvirt.Connect, name string) *libvirt.Interface {
-	iface, err := conn.LookupInterfaceByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return iface
-}
-
-func get_secrets(conn *libvirt.Connect) []string {
-	secrets, err := conn.ListSecrets()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return secrets
-}
-
-func get_secret(conn *libvirt.Connect, uuid string) *libvirt.Secret {
-	secret, err := conn.LookupSecretByUUIDString(uuid)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return secret
-}
-
-func get_storage(conn *libvirt.Connect, name string) *libvirt.StoragePool {
-	storage, err := conn.LookupStoragePoolByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return storage
-}
-
-func get_volume_by_path(conn *libvirt.Connect, path string) *libvirt.StorageVol {
-	volume, err := conn.LookupStorageVolByPath(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return volume
-}
-
-func get_network(conn *libvirt.Connect, net string) *libvirt.Network {
-	network, err := conn.LookupNetworkByName(net)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return network
-}
-
-// TODO : have a look on util.py # https://github.com/retspen/webvirtcloud/blob/master/vrtManager/util.py
-// func get_network_forward(conn *libvirt.Connect, net_name string) {}
-
-func get_nwfilter(conn *libvirt.Connect, name string) *libvirt.NWFilter {
-	nwfilter, err := conn.LookupNWFilterByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nwfilter
-}
-
-func get_instance(conn *libvirt.Connect, name string) *libvirt.Domain {
-	instance, err := conn.LookupDomainByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return instance
-}
-
-// TODO : what is lookById func?
-// func get_instances(conn *libvirt.Connect) {}
