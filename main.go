@@ -7,7 +7,6 @@ import (
 	virt "github.com/edu-cloud-api/libvirt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
-	"libvirt.org/go/libvirt"
 )
 
 // Get any item from .env
@@ -34,6 +33,7 @@ func main() {
 	// test object
 	objConnection := virt.Connection{
 		Host: "captain-2.ce.kmitl.cloud",
+		// Host: "node-02.ce.kmitl.cloud", // 10.55.0.12
 		// Host: "10.20.20.100",
 		Username: AUTHNAME,
 		// Username:  "ce",
@@ -43,22 +43,22 @@ func main() {
 
 	// Start connection with libvirt
 	conn := virt.CreateCompute(objConnection)
-	log.Println(conn)
+	log.Printf("connection pointer : %s", conn)
 
 	// Need to close connection after process done
 	defer conn.Close()
 
-	log.Println(virt.Get_secrets(conn))
-	log.Println(conn.GetURI())
-	log.Println(conn.ListInterfaces())
-	log.Println(conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE))
-	log.Println(conn.ListDomains())
-	log.Println(conn.LookupDomainByName("ce-cloud-freeipa-2"))
-	log.Println(conn.ListNetworks())
-	log.Println(conn.ListStoragePools())
-	log.Println(conn.ListNWFilters())
-	log.Println(conn.IsAlive())
-	log.Println(conn.GetCapabilities())
+	// log.Println(virt.Get_secrets(conn))
+	// log.Println(conn.GetURI())
+	// log.Println(conn.ListInterfaces())
+	// log.Println(conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE))
+	// log.Println(conn.ListDomains())
+	// log.Println(conn.LookupDomainByName("ce-cloud-freeipa-2"))
+	// log.Println(conn.ListNetworks())
+	// log.Println(conn.ListStoragePools())
+	// log.Println(conn.ListNWFilters())
+	// log.Println(conn.IsAlive())
+	log.Println(virt.Get_cap_xml(conn))
 
 	app := fiber.New()
 

@@ -1,56 +1,42 @@
 package libvirt
 
 import (
-	"log"
-
 	"libvirt.org/go/libvirt"
 )
 
 func Get_iface(conn *libvirt.Connect, name string) *libvirt.Interface {
 	iface, err := conn.LookupInterfaceByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return iface
 }
 
 func Get_secrets(conn *libvirt.Connect) []string {
 	secrets, err := conn.ListSecrets()
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return secrets
 }
 
 func Get_secret(conn *libvirt.Connect, uuid string) *libvirt.Secret {
 	secret, err := conn.LookupSecretByUUIDString(uuid)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return secret
 }
 
 func Get_storage(conn *libvirt.Connect, name string) *libvirt.StoragePool {
 	storage, err := conn.LookupStoragePoolByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return storage
 }
 
 func Get_volume_by_path(conn *libvirt.Connect, path string) *libvirt.StorageVol {
 	volume, err := conn.LookupStorageVolByPath(path)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return volume
 }
 
 func Get_network(conn *libvirt.Connect, net string) *libvirt.Network {
 	network, err := conn.LookupNetworkByName(net)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return network
 }
 
@@ -59,17 +45,13 @@ func Get_network(conn *libvirt.Connect, net string) *libvirt.Network {
 
 func Get_nwfilter(conn *libvirt.Connect, name string) *libvirt.NWFilter {
 	nwfilter, err := conn.LookupNWFilterByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return nwfilter
 }
 
 func Get_instance(conn *libvirt.Connect, name string) *libvirt.Domain {
 	instance, err := conn.LookupDomainByName(name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return instance
 }
 
@@ -78,9 +60,7 @@ func Get_instance(conn *libvirt.Connect, name string) *libvirt.Domain {
 
 func Get_cap_xml(conn *libvirt.Connect) string {
 	cap, err := conn.GetCapabilities()
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return cap
 }
 

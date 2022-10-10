@@ -3,6 +3,7 @@ module github.com/edu-cloud-api
 go 1.19
 
 require (
+	github.com/beevik/etree v1.1.0
 	github.com/gofiber/fiber/v2 v2.37.0
 	github.com/spf13/viper v1.13.0
 	libvirt.org/go/libvirt v1.8007.0
@@ -10,7 +11,6 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/beevik/etree v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
