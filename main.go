@@ -65,9 +65,9 @@ func main() {
 	log.Println(virt.GetInstances(conn))
 	log.Println(virt.GetSnapshots(conn))
 	log.Println(virt.GetNetDevices(conn))
-	log.Println(virt.GetHostInstances(conn))
-	log.Println(virt.ArchCanUEFI("aarch64"))
 
+	log.Println(virt.ArchCanUEFI("aarch64p"))
+	log.Println(virt.GetHostInstances(conn))
 	app := fiber.New()
 
 	// Get /health-check

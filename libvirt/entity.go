@@ -168,16 +168,14 @@ func GetNetDevices(conn *libvirt.Connect) []string {
 }
 
 func GetHostInstances(conn *libvirt.Connect) []HostInstance {
-	var vname []HostInstance
 	var vcpu string
 	var vcpuErr error
 	var mem int
 	rawMemSize := false
 	instances := GetInstances(conn)
+	vname := make([]HostInstance, len(instances))
 	for instIndex := range instances {
 		dom := GetInstance(conn, instances[instIndex])
-		domID, domIDErr := dom.GetID()
-		check(domIDErr)
 		domName, domNameErr := dom.GetName()
 		check(domNameErr)
 		domInfo, domInfoErr := dom.GetInfo()
@@ -213,7 +211,7 @@ func GetHostInstances(conn *libvirt.Connect) []HostInstance {
 		if description == "" {
 			description = ""
 		}
-		vname[domID] = HostInstance{
+		vname[instIndex] = HostInstance{
 			Name:        domName,
 			Status:      domInfo.State,
 			UUID:        domUUID,
