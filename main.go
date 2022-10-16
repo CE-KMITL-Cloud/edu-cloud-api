@@ -43,7 +43,7 @@ func main() {
 
 	// Start connection with libvirt
 	conn := virt.CreateCompute(objConnection)
-	log.Printf("connection pointer : %s", conn)
+	log.Println("connection pointer :", conn)
 
 	// Need to close connection after process done
 	defer conn.Close()
@@ -58,7 +58,15 @@ func main() {
 	// log.Println(conn.ListStoragePools())
 	// log.Println(conn.ListNWFilters())
 	// log.Println(conn.IsAlive())
-	log.Println(virt.Get_cap_xml(conn))
+
+	virt.GetCapXML(conn)
+	// log.Println(virt.Get_emulator("x86_64"))
+	log.Println(virt.GetNetworkForward(conn, "host-bridge")) // inactive network not included
+	log.Println(virt.GetInstances(conn))
+	log.Println(virt.GetSnapshots(conn))
+	log.Println(virt.GetNetDevices(conn))
+	log.Println(virt.GetHostInstances(conn))
+	log.Println(virt.ArchCanUEFI("aarch64"))
 
 	app := fiber.New()
 

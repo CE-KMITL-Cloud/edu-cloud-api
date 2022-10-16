@@ -2,40 +2,40 @@ package libvirt
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 
 	etree "github.com/beevik/etree"
 )
 
-// TODO : get XML and save as file then read from file ?
-
-// func Get_xml_path(xml string, path string, function func()) {
-// 	var doc string
-// 	var result string
-// }
-
-func Get_xpath(doc *etree.Element, path string) *etree.Element {
-	var result *etree.Element
-	ret := doc.FindElement(path)
-	if len(ret.Child) >= 1 {
-		result = ret.ChildElements()[0]
-	} else {
-		result = ret
-	}
-	return result
+type UEFIArch struct {
+	i686    []string
+	x86_64  []string
+	aarch64 []string
+	armv7l  []string
 }
 
-func ReadWrite(input string, output_file string) {
+func GetXPath(file string, path string) (string, error) {
+	doc := etree.NewDocument()
+	var result string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for _, e := range doc.FindElements(path) {
+		result = e.Text()
+	}
+	return result, nil
+}
+
+func WriteStringtoFile(input string, output_file string) {
 	f, err := os.Create(output_file)
 	check_panic(err)
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
-	n, err := w.WriteString(input)
-	check_panic(err)
-	fmt.Printf("wrote %d bytes\n", n)
+	w.WriteString(input)
+	// check_panic(err)
+	// fmt.Printf("wrote %d bytes\n", n)
 	w.Flush()
 }
 
@@ -48,5 +48,28 @@ func check(e error) {
 func check_panic(e error) {
 	if e != nil {
 		panic(e)
+	}
+}
+
+func UEFIArchPatterns() UEFIArch {
+	return UEFIArch{
+		i686: []string{
+			`.*ovmf-ia32.*`, // fedora, gerd's firmware repo
+		},
+		x86_64: []string{
+			`.*OVMF_CODE\.fd`,       // RHEL
+			`.*ovmf-x64/OVMF.*\.fd`, // gerd's firmware repo
+			`*ovmf-x86_64-.*`,       // SUSE
+			`.*ovmf.*`,
+			`.*OVMF.*`, // generic attempt at a catchall
+		},
+		aarch64: []string{
+			`.*AAVMF_CODE\.fd`,     // RHEL
+			`.*aarch64/QEMU_EFI.*`, // gerd's firmware repo
+			`.*aarch64.*`,          // generic attempt at a catchall
+		},
+		armv7l: []string{
+			`.*arm/QEMU_EFI.*`, // fedora, gerd's firmware repo
+		},
 	}
 }
