@@ -3,11 +3,22 @@ package libvirt
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"libvirt.org/go/libvirt"
 )
 
 type HostInstance struct {
+	Name        string
+	Status      libvirt.DomainState
+	UUID        string
+	VCPU        string
+	Memory      int
+	Title       string
+	Description string
+}
+
+type UserInstance struct {
 	Name        string
 	Status      libvirt.DomainState
 	UUID        string
@@ -50,17 +61,19 @@ func GetIFace(conn *libvirt.Connect, name string) *libvirt.Interface {
 	return iface
 }
 
-func GetSecrets(conn *libvirt.Connect) []string {
-	secrets, err := conn.ListSecrets()
-	check(err)
-	return secrets
-}
+// * skip this feature
+// func GetSecrets(conn *libvirt.Connect) []string {
+// 	secrets, err := conn.ListSecrets()
+// 	check(err)
+// 	return secrets
+// }
 
-func GetSecret(conn *libvirt.Connect, uuid string) *libvirt.Secret {
-	secret, err := conn.LookupSecretByUUIDString(uuid)
-	check(err)
-	return secret
-}
+// * skip this feature
+// func GetSecret(conn *libvirt.Connect, uuid string) *libvirt.Secret {
+// 	secret, err := conn.LookupSecretByUUIDString(uuid)
+// 	check(err)
+// 	return secret
+// }
 
 func GetStorage(conn *libvirt.Connect, name string) *libvirt.StoragePool {
 	storage, err := conn.LookupStoragePoolByName(name)
@@ -86,11 +99,12 @@ func GetNetworkForward(conn *libvirt.Connect, net_name string) (string, error) {
 	return net_forward, nil
 }
 
-func GetNWFilter(conn *libvirt.Connect, name string) *libvirt.NWFilter {
-	nwfilter, err := conn.LookupNWFilterByName(name)
-	check(err)
-	return nwfilter
-}
+// * skip this feature
+// func GetNWFilter(conn *libvirt.Connect, name string) *libvirt.NWFilter {
+// 	nwfilter, err := conn.LookupNWFilterByName(name)
+// 	check(err)
+// 	return nwfilter
+// }
 
 func GetInstance(conn *libvirt.Connect, name string) *libvirt.Domain {
 	instance, err := conn.LookupDomainByName(name)
@@ -154,12 +168,14 @@ func GetNetDevices(conn *libvirt.Connect) []string {
 	for device_index := range deviceList {
 		xml, xmlErr := deviceList[device_index].GetXMLDesc(0)
 		check(xmlErr)
-		WriteStringtoFile(xml, "device_list.xml")
-		devType, devTypeErr := GetXPath("device_list.xml", "/device/capability/@type")
+		WriteStringtoFile(xml, fmt.Sprintf("xml/device_list_%d.xml", device_index))
+	}
+	for index := range deviceList {
+		devType, devTypeErr := GetXPath(fmt.Sprintf("xml/device_list_%d.xml", index), "./device/capability[@type='net']/interface")
 		check(devTypeErr)
-		iFace, iFaceErr := GetXPath("device_list.xml", "/device/capability/interface")
+		iFace, iFaceErr := GetXPath(fmt.Sprintf("xml/device_list_%d.xml", index), "./device/capability/interface")
 		check(iFaceErr)
-		if devType == "net" {
+		if devType != "" {
 			netDevice = append(netDevice, iFace)
 		}
 	}
@@ -176,8 +192,6 @@ func GetHostInstances(conn *libvirt.Connect) []HostInstance {
 	vname := make([]HostInstance, len(instances))
 	for instIndex := range instances {
 		dom := GetInstance(conn, instances[instIndex])
-		domName, domNameErr := dom.GetName()
-		check(domNameErr)
 		domInfo, domInfoErr := dom.GetInfo()
 		check(domInfoErr)
 		domUUID, domUUIDErr := dom.GetUUIDString()
@@ -188,7 +202,7 @@ func GetHostInstances(conn *libvirt.Connect) []HostInstance {
 		memRaw, memRawErr := GetXPath("host_instances.xml", "/domain/currentMemory")
 		check(memRawErr)
 		if rawMemSize {
-			memInt, memIntErr := strconv.Atoi(memRaw)
+			memInt, memIntErr := strconv.Atoi(memRaw) // 1024
 			check(memIntErr)
 			mem = memInt * (1024 * 1024)
 		}
@@ -212,7 +226,6 @@ func GetHostInstances(conn *libvirt.Connect) []HostInstance {
 			description = ""
 		}
 		vname[instIndex] = HostInstance{
-			Name:        domName,
 			Status:      domInfo.State,
 			UUID:        domUUID,
 			VCPU:        vcpu,
@@ -224,6 +237,52 @@ func GetHostInstances(conn *libvirt.Connect) []HostInstance {
 	return vname
 }
 
+func GetUserInstances(conn *libvirt.Connect, name string) UserInstance {
+	var vcpu string
+	var vcpuErr error
+	dom := GetInstance(conn, name)
+	xml, xmlErr := dom.GetXMLDesc(0)
+	check(xmlErr)
+	WriteStringtoFile(xml, "user_instances.xml")
+	domName, domNameErr := dom.GetName()
+	check(domNameErr)
+	domInfo, domInfoErr := dom.GetInfo()
+	check(domInfoErr)
+	domUUID, domUUIDErr := dom.GetUUIDString()
+	check(domUUIDErr)
+	memRaw, memRawErr := GetXPath("user_instances.xml", "/domain/currentMemory")
+	check(memRawErr)
+	mem, memErr := strconv.Atoi(memRaw) // 1024
+	check(memErr)
+	currentVCpu, currentVCpuErr := GetXPath("user_instances.xml", "/domain/vcpu/@current")
+	check(currentVCpuErr)
+	if currentVCpu != "" {
+		vcpu = currentVCpu
+	} else {
+		vcpu, vcpuErr = GetXPath("user_instances.xml", "/domain/vcpu")
+		check(vcpuErr)
+	}
+	title, titleErr := GetXPath("user_instances.xml", "/domain/title")
+	check(titleErr)
+	if title == "" {
+		title = ""
+	}
+	description, descriptionErr := GetXPath("user_instances.xml", "/domain/description")
+	check(descriptionErr)
+	if description == "" {
+		description = ""
+	}
+	return UserInstance{
+		Name:        domName,
+		Status:      domInfo.State,
+		UUID:        domUUID,
+		VCPU:        vcpu,
+		Memory:      mem,
+		Title:       title,
+		Description: description,
+	}
+}
+
 func ArchCanUEFI(arch string) bool {
 	supportedArch := map[string]bool{
 		"i686":    true,
@@ -232,4 +291,10 @@ func ArchCanUEFI(arch string) bool {
 		"armv7l":  true,
 	}
 	return supportedArch[arch]
+}
+
+func IsQEMU(conn *libvirt.Connect) bool {
+	uri, err := conn.GetURI()
+	check(err)
+	return strings.HasPrefix(uri, "qemu")
 }

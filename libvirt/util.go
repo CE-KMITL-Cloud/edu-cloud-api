@@ -34,8 +34,6 @@ func WriteStringtoFile(input string, output_file string) {
 
 	w := bufio.NewWriter(f)
 	w.WriteString(input)
-	// check_panic(err)
-	// fmt.Printf("wrote %d bytes\n", n)
 	w.Flush()
 }
 

@@ -48,26 +48,6 @@ func main() {
 	// Need to close connection after process done
 	defer conn.Close()
 
-	// log.Println(virt.Get_secrets(conn))
-	// log.Println(conn.GetURI())
-	// log.Println(conn.ListInterfaces())
-	// log.Println(conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE))
-	// log.Println(conn.ListDomains())
-	// log.Println(conn.LookupDomainByName("ce-cloud-freeipa-2"))
-	// log.Println(conn.ListNetworks())
-	// log.Println(conn.ListStoragePools())
-	// log.Println(conn.ListNWFilters())
-	// log.Println(conn.IsAlive())
-
-	virt.GetCapXML(conn)
-	// log.Println(virt.Get_emulator("x86_64"))
-	log.Println(virt.GetNetworkForward(conn, "host-bridge")) // inactive network not included
-	log.Println(virt.GetInstances(conn))
-	log.Println(virt.GetSnapshots(conn))
-	log.Println(virt.GetNetDevices(conn))
-
-	log.Println(virt.ArchCanUEFI("aarch64p"))
-	log.Println(virt.GetHostInstances(conn))
 	app := fiber.New()
 
 	// Get /health-check
