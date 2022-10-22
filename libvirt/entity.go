@@ -2,6 +2,7 @@ package libvirt
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -28,6 +29,11 @@ type UserInstance struct {
 	Description string
 }
 
+type HostEmulator struct {
+	Arch     string
+	Emulator string
+}
+
 func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) {
 	/*
 	   """ Return domain capabilities xml"""
@@ -40,19 +46,50 @@ func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) {
 	   	    machine = "pc" if "pc" in machine_types else machine_types[0]
 	   	return self.wvm.getDomainCapabilities(emulatorbin, arch, machine, virttype)
 	*/
+
+	// emulatorbin := GetEmulator(arch)
+	// var virtType string
 }
 
 func GetCapXML(conn *libvirt.Connect) string {
 	cap, err := conn.GetCapabilities()
 	check(err)
-	WriteStringtoFile(cap, "capabilities.xml")
+	WriteStringtoFile(cap, "xml/capabilities.xml")
 	return cap
 }
 
-func GetEmulator(arch string) string {
-	emu, err := GetXPath("capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/emulator", arch))
+func GetEmulator(conn *libvirt.Connect, arch string) string {
+	GetCapXML(conn)
+	emu, err := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/emulator", arch))
 	check(err)
 	return emu
+}
+
+func GetEmulators(conn *libvirt.Connect) []HostEmulator {
+	GetCapXML(conn)
+	arch, archErr := GetXPathsAttr("xml/capabilities.xml", "./capabilities/guest/arch", "name")
+	check(archErr)
+	emu, emuErr := GetXPaths("xml/capabilities.xml", "./capabilities/guest/arch[@name]/emulator")
+	check(emuErr)
+	result := make([]HostEmulator, len(emu))
+	for i := range emu {
+		result[i] = HostEmulator{Arch: arch[i], Emulator: emu[i]}
+	}
+	return result
+}
+
+func GetMachineTypes(conn *libvirt.Connect, arch string) []string {
+	GetCapXML(conn)
+	var blank []string
+	canonicalName, canonicalNameErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine[@canonical]", arch))
+	check(canonicalNameErr)
+	log.Println(canonicalName)
+	if len(canonicalName) > 0 {
+		machineName, machineNameErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch))
+		check(machineNameErr)
+		return machineName
+	}
+	return blank
 }
 
 func GetIFace(conn *libvirt.Connect, name string) *libvirt.Interface {
@@ -168,12 +205,12 @@ func GetNetDevices(conn *libvirt.Connect) []string {
 	for device_index := range deviceList {
 		xml, xmlErr := deviceList[device_index].GetXMLDesc(0)
 		check(xmlErr)
-		WriteStringtoFile(xml, fmt.Sprintf("xml/device_list_%d.xml", device_index))
+		WriteStringtoFile(xml, fmt.Sprintf("xml/device_list/device_%d.xml", device_index))
 	}
 	for index := range deviceList {
-		devType, devTypeErr := GetXPath(fmt.Sprintf("xml/device_list_%d.xml", index), "./device/capability[@type='net']/interface")
+		devType, devTypeErr := GetXPath(fmt.Sprintf("xml/device_list/device_%d.xml", index), "./device/capability[@type='net']/interface")
 		check(devTypeErr)
-		iFace, iFaceErr := GetXPath(fmt.Sprintf("xml/device_list_%d.xml", index), "./device/capability/interface")
+		iFace, iFaceErr := GetXPath(fmt.Sprintf("xml/device_list/device_%d.xml", index), "./device/capability/interface")
 		check(iFaceErr)
 		if devType != "" {
 			netDevice = append(netDevice, iFace)
@@ -198,29 +235,29 @@ func GetHostInstances(conn *libvirt.Connect) []HostInstance {
 		check(domUUIDErr)
 		xml, xmlErr := dom.GetXMLDesc(0)
 		check(xmlErr)
-		WriteStringtoFile(xml, "host_instances.xml")
-		memRaw, memRawErr := GetXPath("host_instances.xml", "/domain/currentMemory")
+		WriteStringtoFile(xml, "xml/host_instances.xml")
+		memRaw, memRawErr := GetXPath("xml/host_instances.xml", "/domain/currentMemory")
 		check(memRawErr)
 		if rawMemSize {
 			memInt, memIntErr := strconv.Atoi(memRaw) // 1024
 			check(memIntErr)
 			mem = memInt * (1024 * 1024)
 		}
-		currentVCpu, currentVCpuErr := GetXPath("host_instances.xml", "/domain/vcpu/@current")
+		currentVCpu, currentVCpuErr := GetXPath("xml/host_instances.xml", "/domain/vcpu/@current")
 		check(currentVCpuErr)
 
 		if currentVCpu != "" {
 			vcpu = currentVCpu
 		} else {
-			vcpu, vcpuErr = GetXPath("host_instances.xml", "/domain/vcpu")
+			vcpu, vcpuErr = GetXPath("xml/host_instances.xml", "/domain/vcpu")
 			check(vcpuErr)
 		}
-		title, titleErr := GetXPath("host_instances.xml", "/domain/title")
+		title, titleErr := GetXPath("xml/host_instances.xml", "/domain/title")
 		check(titleErr)
 		if title == "" {
 			title = ""
 		}
-		description, descriptionErr := GetXPath("host_instances.xml", "/domain/description")
+		description, descriptionErr := GetXPath("xml/host_instances.xml", "/domain/description")
 		check(descriptionErr)
 		if description == "" {
 			description = ""
@@ -243,31 +280,31 @@ func GetUserInstances(conn *libvirt.Connect, name string) UserInstance {
 	dom := GetInstance(conn, name)
 	xml, xmlErr := dom.GetXMLDesc(0)
 	check(xmlErr)
-	WriteStringtoFile(xml, "user_instances.xml")
+	WriteStringtoFile(xml, "xml/user_instances.xml")
 	domName, domNameErr := dom.GetName()
 	check(domNameErr)
 	domInfo, domInfoErr := dom.GetInfo()
 	check(domInfoErr)
 	domUUID, domUUIDErr := dom.GetUUIDString()
 	check(domUUIDErr)
-	memRaw, memRawErr := GetXPath("user_instances.xml", "/domain/currentMemory")
+	memRaw, memRawErr := GetXPath("xml/user_instances.xml", "/domain/currentMemory")
 	check(memRawErr)
 	mem, memErr := strconv.Atoi(memRaw) // 1024
 	check(memErr)
-	currentVCpu, currentVCpuErr := GetXPath("user_instances.xml", "/domain/vcpu/@current")
+	currentVCpu, currentVCpuErr := GetXPath("xml/user_instances.xml", "/domain/vcpu/@current")
 	check(currentVCpuErr)
 	if currentVCpu != "" {
 		vcpu = currentVCpu
 	} else {
-		vcpu, vcpuErr = GetXPath("user_instances.xml", "/domain/vcpu")
+		vcpu, vcpuErr = GetXPath("xml/user_instances.xml", "/domain/vcpu")
 		check(vcpuErr)
 	}
-	title, titleErr := GetXPath("user_instances.xml", "/domain/title")
+	title, titleErr := GetXPath("xml/user_instances.xml", "/domain/title")
 	check(titleErr)
 	if title == "" {
 		title = ""
 	}
-	description, descriptionErr := GetXPath("user_instances.xml", "/domain/description")
+	description, descriptionErr := GetXPath("xml/user_instances.xml", "/domain/description")
 	check(descriptionErr)
 	if description == "" {
 		description = ""

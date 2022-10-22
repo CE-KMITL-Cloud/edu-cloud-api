@@ -21,8 +21,53 @@ func GetXPath(file string, path string) (string, error) {
 	if err := doc.ReadFromFile(file); err != nil {
 		log.Fatalln(err)
 	}
-	for _, e := range doc.FindElements(path) {
+	e := doc.FindElement(path)
+	if e != nil {
 		result = e.Text()
+	} else {
+		result = ""
+	}
+	return result, nil
+}
+
+func GetElementsLength(file string, path string) int {
+	doc := etree.NewDocument()
+	var arr []string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for _, e := range doc.FindElements(path) {
+		arr = append(arr, e.Text())
+	}
+	return len(arr)
+}
+
+func GetXPathsAttr(file string, path string, key string) ([]string, error) {
+	doc := etree.NewDocument()
+	length := GetElementsLength(file, path)
+	result := make([]string, length)
+	// var result []string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for i, e := range doc.FindElements(path) {
+		result[i] = e.SelectAttr(key).Value
+
+	}
+	return result, nil
+}
+
+func GetXPaths(file string, path string) ([]string, error) {
+	doc := etree.NewDocument()
+	length := GetElementsLength(file, path)
+	result := make([]string, length)
+	// var result []string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for i, e := range doc.FindElements(path) {
+		result[i] = e.Text()
+
 	}
 	return result, nil
 }
