@@ -2,37 +2,11 @@ package libvirt
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
 	"libvirt.org/go/libvirt"
 )
-
-type HostInstance struct {
-	Name        string
-	Status      libvirt.DomainState
-	UUID        string
-	VCPU        string
-	Memory      int
-	Title       string
-	Description string
-}
-
-type UserInstance struct {
-	Name        string
-	Status      libvirt.DomainState
-	UUID        string
-	VCPU        string
-	Memory      int
-	Title       string
-	Description string
-}
-
-type HostEmulator struct {
-	Arch     string
-	Emulator string
-}
 
 func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) {
 	/*
@@ -58,6 +32,35 @@ func GetCapXML(conn *libvirt.Connect) string {
 	return cap
 }
 
+func GetHypervisorsDomainType(conn *libvirt.Connect) []HostDomainType {
+	GetCapXML(conn)
+	arch, archErr := GetXPathsAttr("xml/capabilities.xml", "./capabilities/guest/arch", "name")
+	check(archErr)
+	var domainTypeList []HostDomainType
+	for i := range arch {
+		domainType, domainTypeErr := GetXPathsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/domain", arch[i]), "type")
+		check(domainTypeErr)
+		for j := range domainType {
+			domainTypeList = append(domainTypeList, HostDomainType{Arch: arch[i], DomainType: domainType[j]})
+		}
+	}
+	return domainTypeList
+}
+
+func GetHypervisorsMachines(conn *libvirt.Connect) []HostMachine {
+	GetCapXML(conn)
+	arch, archErr := GetXPathsAttr("xml/capabilities.xml", "./capabilities/guest/arch", "name")
+	check(archErr)
+	var hostMachines []HostMachine
+	for i := range arch {
+		machineType := GetMachineTypes(conn, arch[i])
+		for j := range machineType {
+			hostMachines = append(hostMachines, HostMachine{Arch: arch[i], Machine: machineType[j]})
+		}
+	}
+	return hostMachines
+}
+
 func GetEmulator(conn *libvirt.Connect, arch string) string {
 	GetCapXML(conn)
 	emu, err := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/emulator", arch))
@@ -81,9 +84,8 @@ func GetEmulators(conn *libvirt.Connect) []HostEmulator {
 func GetMachineTypes(conn *libvirt.Connect, arch string) []string {
 	GetCapXML(conn)
 	var blank []string
-	canonicalName, canonicalNameErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine[@canonical]", arch))
+	canonicalName, canonicalNameErr := GetXPathsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine[@canonical]", arch), "canonical")
 	check(canonicalNameErr)
-	log.Println(canonicalName)
 	if len(canonicalName) > 0 {
 		machineName, machineNameErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch))
 		check(machineNameErr)
@@ -92,30 +94,48 @@ func GetMachineTypes(conn *libvirt.Connect, arch string) []string {
 	return blank
 }
 
-func GetIFace(conn *libvirt.Connect, name string) *libvirt.Interface {
+func GetInterface(conn *libvirt.Connect, name string) *libvirt.Interface {
 	iface, err := conn.LookupInterfaceByName(name)
 	check(err)
 	return iface
 }
 
-// * skip this feature
-// func GetSecrets(conn *libvirt.Connect) []string {
-// 	secrets, err := conn.ListSecrets()
-// 	check(err)
-// 	return secrets
-// }
-
-// * skip this feature
-// func GetSecret(conn *libvirt.Connect, uuid string) *libvirt.Secret {
-// 	secret, err := conn.LookupSecretByUUIDString(uuid)
-// 	check(err)
-// 	return secret
-// }
+func GetInterfaces(conn *libvirt.Connect) []string {
+	var interfaces []string
+	interfaceList, interfaceListErr := conn.ListInterfaces()
+	check(interfaceListErr)
+	definedInterfaceList, definedInterfaceListErr := conn.ListDefinedInterfaces()
+	check(definedInterfaceListErr)
+	for iface := range interfaceList {
+		interfaces = append(interfaces, interfaceList[iface])
+	}
+	for iface := range definedInterfaceList {
+		interfaces = append(interfaces, definedInterfaceList[iface])
+	}
+	return interfaces
+}
 
 func GetStorage(conn *libvirt.Connect, name string) *libvirt.StoragePool {
 	storage, err := conn.LookupStoragePoolByName(name)
 	check(err)
 	return storage
+}
+
+func GetStorages(conn *libvirt.Connect, onlyActive bool) []string {
+	var storages []string
+	storagePool, storagePoolErr := conn.ListStoragePools()
+	check(storagePoolErr)
+	for pool := range storagePool {
+		storages = append(storages, storagePool[pool])
+	}
+	if !onlyActive {
+		definedStoragePool, definedStoragePoolErr := conn.ListDefinedStoragePools()
+		check(definedStoragePoolErr)
+		for pool := range definedStoragePool {
+			storages = append(storages, definedStoragePool[pool])
+		}
+	}
+	return storages
 }
 
 func GetVolumeByPath(conn *libvirt.Connect, path string) *libvirt.StorageVol {
@@ -130,18 +150,26 @@ func GetNetwork(conn *libvirt.Connect, net string) *libvirt.Network {
 	return network
 }
 
+func GetNetworks(conn *libvirt.Connect) []string {
+	var hostNets []string
+	netList, netListErr := conn.ListNetworks()
+	check(netListErr)
+	definedNetList, definedNetListErr := conn.ListDefinedNetworks()
+	check(definedNetListErr)
+	for net := range netList {
+		hostNets = append(hostNets, netList[net])
+	}
+	for net := range definedNetList {
+		hostNets = append(hostNets, definedNetList[net])
+	}
+	return hostNets
+}
+
 func GetNetworkForward(conn *libvirt.Connect, net_name string) (string, error) {
 	net_forward, err := GetNetwork(conn, net_name).GetXMLDesc(0)
 	check(err)
 	return net_forward, nil
 }
-
-// * skip this feature
-// func GetNWFilter(conn *libvirt.Connect, name string) *libvirt.NWFilter {
-// 	nwfilter, err := conn.LookupNWFilterByName(name)
-// 	check(err)
-// 	return nwfilter
-// }
 
 func GetInstance(conn *libvirt.Connect, name string) *libvirt.Domain {
 	instance, err := conn.LookupDomainByName(name)
@@ -335,3 +363,64 @@ func IsQEMU(conn *libvirt.Connect) bool {
 	check(err)
 	return strings.HasPrefix(uri, "qemu")
 }
+
+// Get cache available modes
+func GetCacheModes() CacheMode {
+	return CacheMode{
+		Default:      "Default",
+		None:         "Disabled",
+		WriteThrough: "Write through",
+		WriteBack:    "Write back",
+		DirectSync:   "Direct sync", //since libvirt 0.9.5
+		Unsafe:       "Unsafe",      //since libvirt 0.9.7
+	}
+}
+
+// return available io modes
+func GetIOModes() IOMode {
+	return IOMode{
+		Default: "Default",
+		Native:  "Native",
+		Threads: "Threads",
+	}
+}
+
+// return: available discard modes
+func GetDiscardModes() DiscardMode {
+	return DiscardMode{
+		Default: "Default",
+		Ignore:  "Ignore",
+		Unmap:   "Unmap",
+	}
+}
+
+// return: available detect zeroes modes
+func GetDetectZeroModes() DetectZeroMode {
+	return DetectZeroMode{
+		Default: "Default",
+		On:      "On",
+		Off:     "Off",
+		Unmap:   "Unmap",
+	}
+}
+
+// * skip this feature
+// func GetSecrets(conn *libvirt.Connect) []string {
+// 	secrets, err := conn.ListSecrets()
+// 	check(err)
+// 	return secrets
+// }
+
+// * skip this feature
+// func GetSecret(conn *libvirt.Connect, uuid string) *libvirt.Secret {
+// 	secret, err := conn.LookupSecretByUUIDString(uuid)
+// 	check(err)
+// 	return secret
+// }
+
+// * skip this feature
+// func GetNWFilter(conn *libvirt.Connect, name string) *libvirt.NWFilter {
+// 	nwfilter, err := conn.LookupNWFilterByName(name)
+// 	check(err)
+// 	return nwfilter
+// }

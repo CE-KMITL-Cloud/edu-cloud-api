@@ -8,13 +8,6 @@ import (
 	etree "github.com/beevik/etree"
 )
 
-type UEFIArch struct {
-	i686    []string
-	x86_64  []string
-	aarch64 []string
-	armv7l  []string
-}
-
 func GetXPath(file string, path string) (string, error) {
 	doc := etree.NewDocument()
 	var result string
