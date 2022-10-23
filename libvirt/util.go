@@ -1,0 +1,111 @@
+package libvirt
+
+import (
+	"bufio"
+	"log"
+	"os"
+
+	etree "github.com/beevik/etree"
+)
+
+func GetXPath(file string, path string) (string, error) {
+	doc := etree.NewDocument()
+	var result string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	e := doc.FindElement(path)
+	if e != nil {
+		result = e.Text()
+	} else {
+		result = ""
+	}
+	return result, nil
+}
+
+func GetElementsLength(file string, path string) int {
+	doc := etree.NewDocument()
+	var arr []string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for _, e := range doc.FindElements(path) {
+		arr = append(arr, e.Text())
+	}
+	return len(arr)
+}
+
+func GetXPathsAttr(file string, path string, key string) ([]string, error) {
+	doc := etree.NewDocument()
+	length := GetElementsLength(file, path)
+	result := make([]string, length)
+	// var result []string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for i, e := range doc.FindElements(path) {
+		result[i] = e.SelectAttr(key).Value
+
+	}
+	return result, nil
+}
+
+func GetXPaths(file string, path string) ([]string, error) {
+	doc := etree.NewDocument()
+	length := GetElementsLength(file, path)
+	result := make([]string, length)
+	// var result []string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	for i, e := range doc.FindElements(path) {
+		result[i] = e.Text()
+
+	}
+	return result, nil
+}
+
+func WriteStringtoFile(input string, output_file string) {
+	f, err := os.Create(output_file)
+	check_panic(err)
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	w.WriteString(input)
+	w.Flush()
+}
+
+func check(e error) {
+	if e != nil {
+		log.Fatal(e)
+	}
+}
+
+func check_panic(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+func UEFIArchPatterns() UEFIArch {
+	return UEFIArch{
+		i686: []string{
+			`.*ovmf-ia32.*`, // fedora, gerd's firmware repo
+		},
+		x86_64: []string{
+			`.*OVMF_CODE\.fd`,       // RHEL
+			`.*ovmf-x64/OVMF.*\.fd`, // gerd's firmware repo
+			`*ovmf-x86_64-.*`,       // SUSE
+			`.*ovmf.*`,
+			`.*OVMF.*`, // generic attempt at a catchall
+		},
+		aarch64: []string{
+			`.*AAVMF_CODE\.fd`,     // RHEL
+			`.*aarch64/QEMU_EFI.*`, // gerd's firmware repo
+			`.*aarch64.*`,          // generic attempt at a catchall
+		},
+		armv7l: []string{
+			`.*arm/QEMU_EFI.*`, // fedora, gerd's firmware repo
+		},
+	}
+}
