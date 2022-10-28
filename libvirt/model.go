@@ -39,6 +39,11 @@ type HostMachine struct {
 	Machine string
 }
 
+type OsLoaderEnum struct {
+	Enum  string
+	Value string
+}
+
 type UEFIArch struct {
 	i686    []string
 	x86_64  []string
@@ -72,4 +77,22 @@ type DetectZeroMode struct {
 	On      string
 	Off     string
 	Unmap   string
+}
+
+type NetworkModel struct {
+	Default string
+	E1000   string
+	Virtio  string
+}
+
+type ImageFormat struct {
+	Raw   string
+	Qcow  string
+	Qcow2 string
+}
+
+type FileExtension struct {
+	Img   string
+	Qcow  string
+	Qcow2 string
 }

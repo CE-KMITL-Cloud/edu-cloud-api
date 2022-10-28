@@ -39,7 +39,6 @@ func GetXPathsAttr(file string, path string, key string) ([]string, error) {
 	doc := etree.NewDocument()
 	length := GetElementsLength(file, path)
 	result := make([]string, length)
-	// var result []string
 	if err := doc.ReadFromFile(file); err != nil {
 		log.Fatalln(err)
 	}
@@ -54,13 +53,11 @@ func GetXPaths(file string, path string) ([]string, error) {
 	doc := etree.NewDocument()
 	length := GetElementsLength(file, path)
 	result := make([]string, length)
-	// var result []string
 	if err := doc.ReadFromFile(file); err != nil {
 		log.Fatalln(err)
 	}
 	for i, e := range doc.FindElements(path) {
 		result[i] = e.Text()
-
 	}
 	return result, nil
 }
@@ -85,6 +82,15 @@ func check_panic(e error) {
 	if e != nil {
 		panic(e)
 	}
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
 
 func UEFIArchPatterns() UEFIArch {
