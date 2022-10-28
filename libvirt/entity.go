@@ -8,21 +8,30 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) {
-	/*
-	   """ Return domain capabilities xml"""
-
-	   	emulatorbin = self.get_emulator(arch)
-	   	virttype = "kvm" if "kvm" in self.get_hypervisors_domain_types()[arch] else "qemu"
-
-	   	machine_types = self.get_machine_types(arch)
-	   	if not machine or machine not in machine_types:
-	   	    machine = "pc" if "pc" in machine_types else machine_types[0]
-	   	return self.wvm.getDomainCapabilities(emulatorbin, arch, machine, virttype)
-	*/
-
-	// emulatorbin := GetEmulator(arch)
-	// var virtType string
+func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) string {
+	emulatorBin := GetEmulator(conn, arch)
+	virtType := "qemu"
+	hypervisorDomainTypes := GetHypervisorsDomainType(conn)
+	for i := range hypervisorDomainTypes {
+		if hypervisorDomainTypes[i].Arch == arch {
+			if hypervisorDomainTypes[i].DomainType == "kvm" {
+				virtType = "kvm"
+				break
+			}
+		}
+	}
+	machineTypes := GetMachineTypes(conn, arch)
+	if machine != "" || !contains(machineTypes, machine) {
+		if contains(machineTypes, "pc") {
+			machine = "pc"
+		} else {
+			machine = machineTypes[0]
+		}
+	}
+	domCap, err := conn.GetDomainCapabilities(emulatorBin, arch, machine, virtType, 0)
+	check(err)
+	WriteStringtoFile(domCap, fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine))
+	return domCap
 }
 
 func GetCapXML(conn *libvirt.Connect) string {
@@ -30,6 +39,41 @@ func GetCapXML(conn *libvirt.Connect) string {
 	check(err)
 	WriteStringtoFile(cap, "xml/capabilities.xml")
 	return cap
+}
+
+// Host Capabilities for specified architecture
+// func GetCapabilities(conn *libvirt.Connect, arch string) string {
+// 	GetCapXML(conn)
+// 	archElement, archElementErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']", arch))
+// 	check(archElementErr)
+// 	return archElement
+// }
+
+// func GetDomainCapabilities()
+
+// Running hypervisor: QEMU 4.2.1
+func GetVersion(conn *libvirt.Connect) string {
+
+	ver, verErr := conn.GetVersion()
+	check(verErr)
+	major := ver / 1000000
+	ver %= 1000000
+	minor := ver / 1000
+	ver %= 1000
+	release := ver
+	return fmt.Sprintf("%d.%d.%d", major, minor, release)
+}
+
+// Using library: libvirt 6.0.0
+func GetLibVersion(conn *libvirt.Connect) string {
+	ver, verErr := conn.GetLibVersion()
+	check(verErr)
+	major := ver / 1000000
+	ver %= 1000000
+	minor := ver / 1000
+	ver %= 1000
+	release := ver
+	return fmt.Sprintf("%d.%d.%d", major, minor, release)
 }
 
 func GetHypervisorsDomainType(conn *libvirt.Connect) []HostDomainType {
@@ -93,6 +137,96 @@ func GetMachineTypes(conn *libvirt.Connect, arch string) []string {
 	}
 	return blank
 }
+
+func GetOsLoaders(conn *libvirt.Connect, arch string, machine string) []string {
+	if arch == "" {
+		arch = "x86_64"
+	}
+	if machine == "" {
+		machine = "pc"
+	}
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/os/loader[@supported='yes']/value")
+	check(valErr)
+	return val
+}
+
+func GetOsLoaderEnums(conn *libvirt.Connect, arch string, machine string) []OsLoaderEnum {
+	GetDomCapXML(conn, arch, machine)
+	enums, enumsErr := GetXPathsAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/os/loader[@supported='yes']/enum", "name")
+	check(enumsErr)
+	var (
+		val    []string
+		valErr error
+		result []OsLoaderEnum
+	)
+	for i := range enums {
+		val, valErr = GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), fmt.Sprintf("/domainCapabilities/os/loader[@supported='yes']/enum[@name='%s']/value", enums[i]))
+		check(valErr)
+		for j := range val {
+			result = append(result, OsLoaderEnum{Enum: enums[i], Value: val[j]})
+		}
+	}
+	return result
+}
+
+func GetDiskBusTypes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/disk/enum[@name='bus']/value")
+	check(valErr)
+	return val
+}
+
+func GetDiskDeviceTypes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/disk/enum[@name='diskDevice']/value")
+	check(valErr)
+	return val
+}
+
+func GetGraphicTypes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/graphics/enum[@name='type']/value")
+	check(valErr)
+	return val
+}
+
+func GetCPUModes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPathsAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/cpu/mode[@supported='yes']", "name")
+	check(valErr)
+	return val
+}
+
+// func GetCPUCustomTypes()
+
+func GetHostDevModes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/hostdev/enum[@name='mode']/value")
+	check(valErr)
+	return val
+}
+
+func GetHostDevStartupPolicies(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/hostdev/enum[@name='startupPolicy']/value")
+	check(valErr)
+	return val
+}
+
+func GetHostDevSubSysTypes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/hostdev/enum[@name='subsysType']/value")
+	check(valErr)
+	return val
+}
+
+// func GetVideoModels(conn *libvirt.Connect, arch string, machine string) []string {
+// 	GetDomCapXML(conn, arch, machine)
+// 	videoEnum, videoEnumErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/video/enum")
+// 	check(videoEnumErr)
+// 	return videoEnum
+// }
 
 func GetInterface(conn *libvirt.Connect, name string) *libvirt.Interface {
 	iface, err := conn.LookupInterfaceByName(name)
@@ -364,6 +498,14 @@ func IsQEMU(conn *libvirt.Connect) bool {
 	return strings.HasPrefix(uri, "qemu")
 }
 
+// func FindUEFIPathForArch()
+
+// func LabelForFirmwarePath()
+
+// func SupportsUEFIXml()
+
+// func IsSupportsVirtio()
+
 // Get cache available modes
 func GetCacheModes() CacheMode {
 	return CacheMode{
@@ -401,6 +543,33 @@ func GetDetectZeroModes() DetectZeroMode {
 		On:      "On",
 		Off:     "Off",
 		Unmap:   "Unmap",
+	}
+}
+
+// return: network card models
+func GetNetworkModels() NetworkModel {
+	return NetworkModel{
+		Default: "Default",
+		E1000:   "e1000",
+		Virtio:  "virtio",
+	}
+}
+
+// return: available image formats
+func GetImageFormats() ImageFormat {
+	return ImageFormat{
+		Raw:   "raw",
+		Qcow:  "qcow",
+		Qcow2: "qcow2",
+	}
+}
+
+// return: available image filename extensions
+func GetFileExtensions() FileExtension {
+	return FileExtension{
+		Img:   "img",
+		Qcow:  "qcow",
+		Qcow2: "qcow2",
 	}
 }
 
