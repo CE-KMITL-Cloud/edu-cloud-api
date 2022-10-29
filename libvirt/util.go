@@ -92,26 +92,3 @@ func contains(s []string, str string) bool {
 	}
 	return false
 }
-
-func UEFIArchPatterns() UEFIArch {
-	return UEFIArch{
-		i686: []string{
-			`.*ovmf-ia32.*`, // fedora, gerd's firmware repo
-		},
-		x86_64: []string{
-			`.*OVMF_CODE\.fd`,       // RHEL
-			`.*ovmf-x64/OVMF.*\.fd`, // gerd's firmware repo
-			`*ovmf-x86_64-.*`,       // SUSE
-			`.*ovmf.*`,
-			`.*OVMF.*`, // generic attempt at a catchall
-		},
-		aarch64: []string{
-			`.*AAVMF_CODE\.fd`,     // RHEL
-			`.*aarch64/QEMU_EFI.*`, // gerd's firmware repo
-			`.*aarch64.*`,          // generic attempt at a catchall
-		},
-		armv7l: []string{
-			`.*arm/QEMU_EFI.*`, // fedora, gerd's firmware repo
-		},
-	}
-}

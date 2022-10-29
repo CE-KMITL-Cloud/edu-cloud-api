@@ -2,7 +2,6 @@ package libvirt
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -526,23 +525,17 @@ func FindUEFIPathForArch(conn *libvirt.Connect, arch string, machine string) str
 		return ""
 	}
 	loaders := GetOsLoaders(conn, arch, machine)
-	log.Println("loaders :", loaders)
+	archPatterns := GetUEFIArchPatterns()
 	var patterns []string
-	if arch == "i686" {
-		patterns = UEFIArchPatterns().i686
-	} else if arch == "x86_64" {
-		patterns = UEFIArchPatterns().x86_64
-	} else if arch == "aarch64" {
-		patterns = UEFIArchPatterns().aarch64
-	} else if arch == "armv7l" {
-		patterns = UEFIArchPatterns().armv7l
+	for i := range archPatterns {
+		if arch == archPatterns[i].Arch {
+			patterns = append(patterns, archPatterns[i].UEFI...)
+		}
 	}
-	log.Println("patterns :", patterns)
 	for i := range patterns {
 		for j := range loaders {
 			match, _ := regexp.MatchString(patterns[i], loaders[j])
 			if match {
-				log.Println("loaders[j] :", loaders[j])
 				return loaders[j]
 			}
 		}
@@ -551,20 +544,64 @@ func FindUEFIPathForArch(conn *libvirt.Connect, arch string, machine string) str
 }
 
 // Return a pretty label for passed path, based on if we know about it or no
-// func LabelForFirmwarePath(conn *libvirt.Connect, arch string, path string) string {
-// 	var archs[]{"i686", "x86_64"}
-// 	if path == "" {
-// 		if contains(archs, arch) {
-// 			return "BIOS"
-// 		}
-// 		return ""
-// 	}
-
-// }
+func LabelForFirmwarePath(conn *libvirt.Connect, arch string, path string) string {
+	archs := []string{"i686", "x86_64"}
+	if path == "" {
+		if contains(archs, arch) {
+			return "BIOS"
+		}
+		return ""
+	}
+	archPatterns := GetUEFIArchPatterns()
+	for i := range archPatterns {
+		for j := range archPatterns[i].UEFI {
+			match, _ := regexp.MatchString(archPatterns[i].UEFI[j], path)
+			if match {
+				return fmt.Sprintf("UEFI %s: %s", arch, path)
+			}
+		}
+	}
+	return fmt.Sprintf("Custom: %s", path)
+}
 
 // func SupportsUEFIXml()
 
 // func IsSupportsVirtio()
+
+func GetUEFIArchPatterns() []ArchUEFI {
+	return []ArchUEFI{
+		{
+			Arch: "i686",
+			UEFI: []string{
+				`.*ovmf-ia32.*`, // fedora, gerd's firmware repo
+			},
+		},
+		{
+			Arch: "x86_64",
+			UEFI: []string{
+				`.*OVMF_CODE\.fd`,       // RHEL
+				`.*ovmf-x64/OVMF.*\.fd`, // gerd's firmware repo
+				`*ovmf-x86_64-.*`,       // SUSE
+				`.*ovmf.*`,
+				`.*OVMF.*`, // generic attempt at a catchall
+			},
+		},
+		{
+			Arch: "aarch64",
+			UEFI: []string{
+				`.*AAVMF_CODE\.fd`,     // RHEL
+				`.*aarch64/QEMU_EFI.*`, // gerd's firmware repo
+				`.*aarch64.*`,          // generic attempt at a catchall
+			},
+		},
+		{
+			Arch: "armv7l",
+			UEFI: []string{
+				`.*arm/QEMU_EFI.*`, // fedora, gerd's firmware repo
+			},
+		},
+	}
+}
 
 // Get cache available modes
 func GetCacheModes() CacheMode {

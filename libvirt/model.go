@@ -44,11 +44,9 @@ type OsLoaderEnum struct {
 	Value string
 }
 
-type UEFIArch struct {
-	i686    []string
-	x86_64  []string
-	aarch64 []string
-	armv7l  []string
+type ArchUEFI struct {
+	Arch string
+	UEFI []string
 }
 
 type CacheMode struct {
