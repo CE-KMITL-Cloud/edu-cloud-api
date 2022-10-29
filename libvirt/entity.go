@@ -2,6 +2,8 @@ package libvirt
 
 import (
 	"fmt"
+	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -21,7 +23,7 @@ func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) string {
 		}
 	}
 	machineTypes := GetMachineTypes(conn, arch)
-	if machine != "" || !contains(machineTypes, machine) {
+	if machine == "" || !contains(machineTypes, machine) {
 		if contains(machineTypes, "pc") {
 			machine = "pc"
 		} else {
@@ -198,7 +200,21 @@ func GetCPUModes(conn *libvirt.Connect, arch string, machine string) []string {
 	return val
 }
 
-// func GetCPUCustomTypes()
+func GetCPUCustomTypes(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	var result []string
+	usableYes, usableYesErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/cpu/mode[@name='custom'][@supported='yes']/model[@usable='yes']")
+	check(usableYesErr)
+	usableUnknown, usableUnknownErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/cpu/mode[@name='custom'][@supported='yes']/model[@usable='unknown']")
+	check(usableUnknownErr)
+	for i := range usableYes {
+		result = append(result, usableYes[i])
+	}
+	for i := range usableUnknown {
+		result = append(result, usableUnknown[i])
+	}
+	return result
+}
 
 func GetHostDevModes(conn *libvirt.Connect, arch string, machine string) []string {
 	GetDomCapXML(conn, arch, machine)
@@ -221,12 +237,18 @@ func GetHostDevSubSysTypes(conn *libvirt.Connect, arch string, machine string) [
 	return val
 }
 
-// func GetVideoModels(conn *libvirt.Connect, arch string, machine string) []string {
-// 	GetDomCapXML(conn, arch, machine)
-// 	videoEnum, videoEnumErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/video/enum")
-// 	check(videoEnumErr)
-// 	return videoEnum
-// }
+func GetVideoModels(conn *libvirt.Connect, arch string, machine string) []string {
+	GetDomCapXML(conn, arch, machine)
+	videoEnumName, videoEnumNameErr := GetXPathsAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/video/enum", "name")
+	check(videoEnumNameErr)
+	videoEnum, videoEnumErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/video/enum[@name='modelType']/value")
+	check(videoEnumErr)
+	var result []string
+	if videoEnumName[0] == "modelType" {
+		result = append(result, videoEnum...)
+	}
+	return result
+}
 
 func GetInterface(conn *libvirt.Connect, name string) *libvirt.Interface {
 	iface, err := conn.LookupInterfaceByName(name)
@@ -498,9 +520,47 @@ func IsQEMU(conn *libvirt.Connect) bool {
 	return strings.HasPrefix(uri, "qemu")
 }
 
-// func FindUEFIPathForArch()
+// Search the loader paths for one that matches the passed arch
+func FindUEFIPathForArch(conn *libvirt.Connect, arch string, machine string) string {
+	if !ArchCanUEFI(arch) {
+		return ""
+	}
+	loaders := GetOsLoaders(conn, arch, machine)
+	log.Println("loaders :", loaders)
+	var patterns []string
+	if arch == "i686" {
+		patterns = UEFIArchPatterns().i686
+	} else if arch == "x86_64" {
+		patterns = UEFIArchPatterns().x86_64
+	} else if arch == "aarch64" {
+		patterns = UEFIArchPatterns().aarch64
+	} else if arch == "armv7l" {
+		patterns = UEFIArchPatterns().armv7l
+	}
+	log.Println("patterns :", patterns)
+	for i := range patterns {
+		for j := range loaders {
+			match, _ := regexp.MatchString(patterns[i], loaders[j])
+			if match {
+				log.Println("loaders[j] :", loaders[j])
+				return loaders[j]
+			}
+		}
+	}
+	return ""
+}
 
-// func LabelForFirmwarePath()
+// Return a pretty label for passed path, based on if we know about it or no
+// func LabelForFirmwarePath(conn *libvirt.Connect, arch string, path string) string {
+// 	var archs[]{"i686", "x86_64"}
+// 	if path == "" {
+// 		if contains(archs, arch) {
+// 			return "BIOS"
+// 		}
+// 		return ""
+// 	}
+
+// }
 
 // func SupportsUEFIXml()
 
