@@ -62,6 +62,19 @@ func GetXPaths(file string, path string) ([]string, error) {
 	return result, nil
 }
 
+// func GetTags(file string, path string) ([]string, error) {
+// 	doc := etree.NewDocument()
+// 	length := GetElementsLength(file, path)
+// 	result := make([]string, length)
+// 	if err := doc.ReadFromFile(file); err != nil {
+// 		log.Fatalln(err)
+// 	}
+// 	for i, e := range doc.FindElements(path) {
+// 		result[i] = e.Tail()
+// 	}
+// 	return result, nil
+// }
+
 func WriteStringtoFile(input string, output_file string) {
 	f, err := os.Create(output_file)
 	check_panic(err)

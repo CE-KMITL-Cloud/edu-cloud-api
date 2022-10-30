@@ -43,11 +43,19 @@ func GetCapXML(conn *libvirt.Connect) string {
 }
 
 // Host Capabilities for specified architecture
-// func GetCapabilities(conn *libvirt.Connect, arch string) string {
+// func GetCapabilities(conn *libvirt.Connect, arch string) []string {
 // 	GetCapXML(conn)
-// 	archElement, archElementErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']", arch))
-// 	check(archElementErr)
-// 	return archElement
+// 	// archWordSize, archWordSizeErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/wordsize", arch))
+// 	// check(archWordSizeErr)
+// 	// archEmu, archEmuErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/emulator", arch))
+// 	// check(archEmuErr)
+// 	// archDomains, archDomainsErr := GetXPathsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/domain", arch), "type")
+// 	// check(archDomainsErr)
+// 	// archMachines, archMachinesErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch))
+// 	// check(archMachinesErr)
+// 	archFeatures, archFeaturesErr := GetTags("xml/capabilities.xml", "./capabilities/guest/features")
+// 	check(archFeaturesErr)
+// 	return archFeatures
 // }
 
 // func GetDomainCapabilities()
@@ -564,9 +572,36 @@ func LabelForFirmwarePath(conn *libvirt.Connect, arch string, path string) strin
 	return fmt.Sprintf("Custom: %s", path)
 }
 
-// func SupportsUEFIXml()
+// Return True if libvirt advertises support for proper UEFI setup
+func SupportsUEFIXml(conn *libvirt.Connect, loader_enums []OsLoaderEnum) bool {
+	hasReadonly := false
+	hasYes := false
+	for i := range loader_enums {
+		if loader_enums[i].Enum == "readonly" {
+			hasReadonly = true
+			if loader_enums[i].Value == "yes" {
+				hasYes = true
+			}
+		}
+	}
+	return (hasReadonly && hasYes)
+}
 
-// func IsSupportsVirtio()
+func IsSupportsVirtio(conn *libvirt.Connect, arch string, machine string) bool {
+	if !IsQEMU(conn) {
+		return false
+	}
+	// These _only_ support virtio so don't check the OS
+	archs := []string{"aarch64", "armv7l", "ppc64", "ppc64le", "s390x", "riscv64", "riscv32"}
+	machines := []string{"virt", "pseries"}
+	if contains(archs, arch) && contains(machines, machine) {
+		return true
+	}
+	if contains([]string{"x86_64", "i686"}, arch) {
+		return true
+	}
+	return false
+}
 
 func GetUEFIArchPatterns() []ArchUEFI {
 	return []ArchUEFI{
