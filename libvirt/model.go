@@ -4,6 +4,51 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
+type ArchCapabilities struct {
+	WordSize string
+	Emulator string
+	Domains  []string
+	Machines []MachineDetail
+	Features []string
+	OsType   string
+}
+
+// ! Not finalize yet
+type DomCapabilities struct {
+	Path                   string
+	Domain                 string
+	Machine                string
+	VcpuMax                string
+	IoThreads              string
+	OsSupport              string
+	LoaderSupport          string
+	Loader                 []string
+	LoaderEnums            []OsLoaderEnum
+	CpuModes               []string
+	CpuCustomModels        []string
+	DiskSupport            string
+	DiskDevices            []string
+	DiskBus                []string
+	GraphicsSupport        string
+	GraphicsTypes          []string
+	VideoSupport           string
+	VideoTypes             []string
+	HostDevSupport         string
+	HostDevTypes           []string
+	HostDevStartupPolicies []string
+	HostDevSubSysTypes     []string
+	FeaturesGicSupport     string
+	FeatureGenIdSupport    string
+	FeatureVMCoreInfo      string
+	FeatureSevSupport      string
+}
+
+type MachineDetail struct {
+	Machine   string
+	MaxCPU    string
+	Canonical string
+}
+
 type HostInstance struct {
 	Name        string
 	Status      libvirt.DomainState

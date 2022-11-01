@@ -43,22 +43,46 @@ func GetCapXML(conn *libvirt.Connect) string {
 }
 
 // Host Capabilities for specified architecture
-// func GetCapabilities(conn *libvirt.Connect, arch string) []string {
-// 	GetCapXML(conn)
-// 	// archWordSize, archWordSizeErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/wordsize", arch))
-// 	// check(archWordSizeErr)
-// 	// archEmu, archEmuErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/emulator", arch))
-// 	// check(archEmuErr)
-// 	// archDomains, archDomainsErr := GetXPathsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/domain", arch), "type")
-// 	// check(archDomainsErr)
-// 	// archMachines, archMachinesErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch))
-// 	// check(archMachinesErr)
-// 	archFeatures, archFeaturesErr := GetTags("xml/capabilities.xml", "./capabilities/guest/features")
-// 	check(archFeaturesErr)
-// 	return archFeatures
-// }
+func GetCapabilities(conn *libvirt.Connect, arch string) ArchCapabilities {
+	GetCapXML(conn)
+	archWordSize, archWordSizeErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/wordsize", arch))
+	check(archWordSizeErr)
+	archEmu, archEmuErr := GetXPath("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/emulator", arch))
+	check(archEmuErr)
+	archDomains, archDomainsErr := GetXPathsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/domain", arch), "type")
+	check(archDomainsErr)
+	archMachines, archMachinesErr := GetXPaths("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch))
+	check(archMachinesErr)
+	maxCpu, maxCpuErr := GetChildElementsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch), archMachines, "maxCpus")
+	check(maxCpuErr)
+	canonical, canonicalErr := GetChildElementsAttr("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']/machine", arch), archMachines, "canonical")
+	check(canonicalErr)
+	var machineDetail []MachineDetail
+	for i := range archMachines {
+		machineDetail = append(machineDetail, MachineDetail{
+			Machine:   archMachines[i],
+			MaxCPU:    maxCpu[i],
+			Canonical: canonical[i],
+		})
+	}
+	archFeatures, archFeaturesErr := GetParentTags("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']", arch), "features")
+	check(archFeaturesErr)
+	archOsType, archOsTypeErr := GetParentText("xml/capabilities.xml", fmt.Sprintf("./capabilities/guest/arch[@name='%s']", arch), "os_type")
+	check(archOsTypeErr)
+	return ArchCapabilities{
+		WordSize: archWordSize,
+		Emulator: archEmu,
+		Domains:  archDomains,
+		Machines: machineDetail,
+		Features: archFeatures,
+		OsType:   archOsType,
+	}
+}
 
-// func GetDomainCapabilities()
+// TODO
+func GetDomainCapabilities(conn *libvirt.Connect, arch string, machine string) {
+	GetDomCapXML(conn, arch, machine)
+}
 
 // Running hypervisor: QEMU 4.2.1
 func GetVersion(conn *libvirt.Connect) string {
