@@ -2,6 +2,7 @@ package libvirt
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
+// TODO: Recheck this func
 func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) string {
 	emulatorBin := GetEmulator(conn, arch)
 	virtType := "qemu"
@@ -23,12 +25,15 @@ func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) string {
 	}
 	machineTypes := GetMachineTypes(conn, arch)
 	if machine == "" || !contains(machineTypes, machine) {
+		// log.Println(machine)
+		// log.Println(machineTypes)
 		if contains(machineTypes, "pc") {
 			machine = "pc"
 		} else {
 			machine = machineTypes[0]
 		}
 	}
+	log.Println("machine :", machine)
 	domCap, err := conn.GetDomainCapabilities(emulatorBin, arch, machine, virtType, 0)
 	check(err)
 	WriteStringtoFile(domCap, fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine))
@@ -79,9 +84,102 @@ func GetCapabilities(conn *libvirt.Connect, arch string) ArchCapabilities {
 	}
 }
 
-// TODO
-func GetDomainCapabilities(conn *libvirt.Connect, arch string, machine string) {
+func GetDomainCapabilities(conn *libvirt.Connect, arch string, machine string) DomCapabilities {
 	GetDomCapXML(conn, arch, machine)
+	var (
+		loaders                []string
+		loaderEnums            []OsLoaderEnum
+		cpuCustomModel         []string
+		diskDevice             []string
+		diskBus                []string
+		graphicsTypes          []string
+		videoTypes             []string
+		hostDevTypes           []string
+		hostDevStartupPolicies []string
+		hostDevSubSysTypes     []string
+	)
+	path, pathErr := GetXPath(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/path")
+	check(pathErr)
+	domain, domainErr := GetXPath(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/domain")
+	check(domainErr)
+	machine, machineErr := GetXPath(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/machine")
+	check(machineErr)
+	vcpu, vcpuErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/vcpu", "max")
+	check(vcpuErr)
+	ioThreads, ioThreadsErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/iothreads", "supported")
+	check(ioThreadsErr)
+	osSupport, osSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/os", "supported")
+	check(osSupportErr)
+	loaderSupport, loaderSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/os/loader", "supported")
+	check(loaderSupportErr)
+	if loaderSupport == "yes" {
+		loaders = GetOsLoaders(conn, arch, machine)
+		loaderEnums = GetOsLoaderEnums(conn, arch, machine)
+	}
+	cpuModes := GetCPUModes(conn, arch, machine)
+	if contains(cpuModes, "custom") {
+		// supported and unknown cpu models
+		cpuCustomModel = GetCPUCustomTypes(conn, arch, machine)
+	}
+	diskSupport, diskSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/devices/disk", "supported")
+	check(diskSupportErr)
+	if diskSupport == "yes" {
+		diskDevice = GetDiskDeviceTypes(conn, arch, machine)
+		diskBus = GetDiskBusTypes(conn, arch, machine)
+	}
+	graphicsSupport, graphicsSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/devices/graphics", "supported")
+	check(graphicsSupportErr)
+	if graphicsSupport == "yes" {
+		graphicsTypes = GetGraphicTypes(conn, arch, machine)
+	}
+	videoSupport, videoSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/devices/video", "supported")
+	check(videoSupportErr)
+	if videoSupport == "yes" {
+		videoTypes = GetVideoModels(conn, arch, machine)
+	}
+	hostDevSupport, hostDevSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/devices/hostdev", "supported")
+	check(hostDevSupportErr)
+	if hostDevSupport == "yes" {
+		hostDevTypes = GetHostDevModes(conn, arch, machine)
+		hostDevStartupPolicies = GetHostDevStartupPolicies(conn, arch, machine)
+		hostDevSubSysTypes = GetHostDevSubSysTypes(conn, arch, machine)
+	}
+	gicSupport, gicSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/features/gic", "supported")
+	check(gicSupportErr)
+	genIdSupport, genIdSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/features/genid", "supported")
+	check(genIdSupportErr)
+	vmCoreInfoSupport, vmCoreInfoSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/features/vmcoreinfo", "supported")
+	check(vmCoreInfoSupportErr)
+	sevSupport, sevSupportErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/features/sev", "supported")
+	check(sevSupportErr)
+	return DomCapabilities{
+		Path:                   path,
+		Domain:                 domain,
+		Machine:                machine,
+		VcpuMax:                vcpu,
+		IoThreads:              ioThreads,
+		OsSupport:              osSupport,
+		LoaderSupport:          loaderSupport,
+		Loader:                 loaders,
+		LoaderEnums:            loaderEnums,
+		CpuModes:               cpuModes,
+		CpuCustomModels:        cpuCustomModel,
+		DiskSupport:            diskSupport,
+		DiskDevices:            diskDevice,
+		DiskBus:                diskBus,
+		GraphicsSupport:        graphicsSupport,
+		GraphicsTypes:          graphicsTypes,
+		VideoSupport:           videoSupport,
+		VideoTypes:             videoTypes,
+		HostDevSupport:         hostDevSupport,
+		HostDevTypes:           hostDevTypes,
+		HostDevStartupPolicies: hostDevStartupPolicies,
+		HostDevSubSysTypes:     hostDevSubSysTypes,
+		FeaturesGicSupport:     gicSupport,
+		FeatureGenIdSupport:    genIdSupport,
+		FeatureVMCoreInfo:      vmCoreInfoSupport,
+		FeatureSevSupport:      sevSupport,
+	}
 }
 
 // Running hypervisor: QEMU 4.2.1

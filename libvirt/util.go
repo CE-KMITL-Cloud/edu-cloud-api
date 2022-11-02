@@ -23,6 +23,21 @@ func GetXPath(file string, path string) (string, error) {
 	return result, nil
 }
 
+func GetXPathAttr(file string, path string, key string) (string, error) {
+	doc := etree.NewDocument()
+	var result string
+	if err := doc.ReadFromFile(file); err != nil {
+		log.Fatalln(err)
+	}
+	e := doc.FindElement(path)
+	if e != nil {
+		result = e.SelectAttr(key).Value
+	} else {
+		result = ""
+	}
+	return result, nil
+}
+
 func GetElementsLength(file string, path string) int {
 	doc := etree.NewDocument()
 	var arr []string
