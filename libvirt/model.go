@@ -13,7 +13,6 @@ type ArchCapabilities struct {
 	OsType   string
 }
 
-// ! Not finalize yet
 type DomCapabilities struct {
 	Path                   string
 	Domain                 string

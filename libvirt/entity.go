@@ -2,7 +2,6 @@ package libvirt
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,14 +9,13 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-// TODO: Recheck this func
 func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) string {
 	emulatorBin := GetEmulator(conn, arch)
 	virtType := "qemu"
 	hypervisorDomainTypes := GetHypervisorsDomainType(conn)
-	for i := range hypervisorDomainTypes {
-		if hypervisorDomainTypes[i].Arch == arch {
-			if hypervisorDomainTypes[i].DomainType == "kvm" {
+	for _, val := range hypervisorDomainTypes {
+		if val.Arch == arch {
+			if val.DomainType == "kvm" {
 				virtType = "kvm"
 				break
 			}
@@ -25,19 +23,19 @@ func GetDomCapXML(conn *libvirt.Connect, arch string, machine string) string {
 	}
 	machineTypes := GetMachineTypes(conn, arch)
 	if machine == "" || !contains(machineTypes, machine) {
-		// log.Println(machine)
-		// log.Println(machineTypes)
 		if contains(machineTypes, "pc") {
 			machine = "pc"
 		} else {
 			machine = machineTypes[0]
 		}
 	}
-	log.Println("machine :", machine)
 	domCap, err := conn.GetDomainCapabilities(emulatorBin, arch, machine, virtType, 0)
 	check(err)
 	WriteStringtoFile(domCap, fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine))
-	return domCap
+
+	// return machine incase machine in other func is ""
+	// don't need to return domCap
+	return machine
 }
 
 func GetCapXML(conn *libvirt.Connect) string {
@@ -85,7 +83,7 @@ func GetCapabilities(conn *libvirt.Connect, arch string) ArchCapabilities {
 }
 
 func GetDomainCapabilities(conn *libvirt.Connect, arch string, machine string) DomCapabilities {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	var (
 		loaders                []string
 		loaderEnums            []OsLoaderEnum
@@ -102,8 +100,8 @@ func GetDomainCapabilities(conn *libvirt.Connect, arch string, machine string) D
 	check(pathErr)
 	domain, domainErr := GetXPath(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/domain")
 	check(domainErr)
-	machine, machineErr := GetXPath(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/machine")
-	check(machineErr)
+	domMachine, domMachineErr := GetXPath(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/machine")
+	check(domMachineErr)
 	vcpu, vcpuErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/vcpu", "max")
 	check(vcpuErr)
 	ioThreads, ioThreadsErr := GetXPathAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/iothreads", "supported")
@@ -155,7 +153,7 @@ func GetDomainCapabilities(conn *libvirt.Connect, arch string, machine string) D
 	return DomCapabilities{
 		Path:                   path,
 		Domain:                 domain,
-		Machine:                machine,
+		Machine:                domMachine,
 		VcpuMax:                vcpu,
 		IoThreads:              ioThreads,
 		OsSupport:              osSupport,
@@ -276,14 +274,14 @@ func GetOsLoaders(conn *libvirt.Connect, arch string, machine string) []string {
 	if machine == "" {
 		machine = "pc"
 	}
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/os/loader[@supported='yes']/value")
 	check(valErr)
 	return val
 }
 
 func GetOsLoaderEnums(conn *libvirt.Connect, arch string, machine string) []OsLoaderEnum {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	enums, enumsErr := GetXPathsAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "./domainCapabilities/os/loader[@supported='yes']/enum", "name")
 	check(enumsErr)
 	var (
@@ -302,35 +300,35 @@ func GetOsLoaderEnums(conn *libvirt.Connect, arch string, machine string) []OsLo
 }
 
 func GetDiskBusTypes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/disk/enum[@name='bus']/value")
 	check(valErr)
 	return val
 }
 
 func GetDiskDeviceTypes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/disk/enum[@name='diskDevice']/value")
 	check(valErr)
 	return val
 }
 
 func GetGraphicTypes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/graphics/enum[@name='type']/value")
 	check(valErr)
 	return val
 }
 
 func GetCPUModes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPathsAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/cpu/mode[@supported='yes']", "name")
 	check(valErr)
 	return val
 }
 
 func GetCPUCustomTypes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	var result []string
 	usableYes, usableYesErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/cpu/mode[@name='custom'][@supported='yes']/model[@usable='yes']")
 	check(usableYesErr)
@@ -346,28 +344,28 @@ func GetCPUCustomTypes(conn *libvirt.Connect, arch string, machine string) []str
 }
 
 func GetHostDevModes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/hostdev/enum[@name='mode']/value")
 	check(valErr)
 	return val
 }
 
 func GetHostDevStartupPolicies(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/hostdev/enum[@name='startupPolicy']/value")
 	check(valErr)
 	return val
 }
 
 func GetHostDevSubSysTypes(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	val, valErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/hostdev/enum[@name='subsysType']/value")
 	check(valErr)
 	return val
 }
 
 func GetVideoModels(conn *libvirt.Connect, arch string, machine string) []string {
-	GetDomCapXML(conn, arch, machine)
+	machine = GetDomCapXML(conn, arch, machine)
 	videoEnumName, videoEnumNameErr := GetXPathsAttr(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/video/enum", "name")
 	check(videoEnumNameErr)
 	videoEnum, videoEnumErr := GetXPaths(fmt.Sprintf("xml/dom_cap_%s_%s.xml", arch, machine), "/domainCapabilities/devices/video/enum[@name='modelType']/value")
