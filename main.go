@@ -1,3 +1,4 @@
+// Package main -
 package main
 
 import (
@@ -37,13 +38,46 @@ func main() {
 		// Host: "10.20.20.100",
 		Username: AUTHNAME,
 		// Username:  "ce",
-		Passwd:    PASSPHASE,
-		Conn_type: "tls",
+		Passwd:   PASSPHASE,
+		ConnType: "tls",
 	}
 
 	// Start connection with libvirt
 	conn := virt.CreateCompute(objConnection)
 	log.Println("connection pointer :", conn)
+
+	// log.Println("connection pointer :", conn)
+	// log.Println(virt.GetEmulator(conn, "i686"))
+	// log.Println(virt.GetInstances(conn))
+	// log.Println(virt.GetSnapshots(conn))
+	// log.Println(virt.GetHostInstances(conn))
+	// log.Println(virt.GetUserInstances(conn, "ce-cloud-freeipa-2"))
+	// log.Println(virt.GetNetDevices(conn))
+	// log.Println(virt.GetMachineTypes(conn, "i686"))
+	// log.Println(virt.GetEmulators(conn))
+	// log.Println(virt.GetHypervisorsDomainType(conn))
+	// log.Println(virt.GetHypervisorsMachines(conn))
+	// log.Println(virt.GetDomCapXML(conn, "i686", "pc-i440fx-4.2"))
+	// log.Println(virt.GetCapabilities(conn, "i686"))
+	// log.Println(virt.GetDomainCapabilities(conn, "i686", "pc-i440fx-focal"))
+	// log.Println(virt.GetDomainCapabilities(conn, "x86_64", ""))
+	log.Println(virt.CreateInstance(conn, "test-instance", "2", "2", "no-mode", "uuid", "i686", "pc", "BIOS", "", "", "", "", "", "", "", "", "", "", "", virt.OsLoaderEnum{}))
+	// log.Println(virt.GetVersion(conn))
+	// log.Println(virt.GetLibVersion(conn))
+	// log.Println(virt.GetOsLoaders(conn, "i686", ""))
+	// log.Println(virt.GetOsLoaderEnums(conn, "i686", "pc"))
+	// log.Println(virt.GetDiskBusTypes(conn, "i686", "pc"))
+	// log.Println(virt.GetDiskDeviceTypes(conn, "i686", "pc"))
+	// log.Println(virt.GetGraphicTypes(conn, "i686", "pc"))
+	// log.Println(virt.GetCPUModes(conn, "i686", "pc"))
+	// log.Println(virt.GetVideoModels(conn, "i686", "pc"))
+	// log.Println(virt.GetCPUCustomTypes(conn, "i686", "pc"))
+	// log.Println(virt.GetVideoModels(conn, "i686", "pc-i440fx-focal"))
+	// log.Println(virt.FindUEFIPathForArch(conn, "x86_64", "pc-i440fx-focal"))
+	// log.Println(virt.LabelForFirmwarePath(conn, "x86_64", "/usr/share/OVMF/OVMF_CODE.fd"))
+	// log.Println(virt.GetStorages(conn, false))
+	// log.Println(virt.GetInterfaces(conn))
+	// log.Println(virt.GetNetworks(conn))
 
 	// Need to close connection after process done
 	defer conn.Close()

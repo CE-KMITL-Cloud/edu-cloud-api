@@ -8,6 +8,7 @@ import (
 	etree "github.com/beevik/etree"
 )
 
+// GetXPath - Getting element from given path
 func GetXPath(file string, path string) (string, error) {
 	doc := etree.NewDocument()
 	var result string
@@ -23,6 +24,7 @@ func GetXPath(file string, path string) (string, error) {
 	return result, nil
 }
 
+// GetXPathAttr - Getting Attr from element
 func GetXPathAttr(file string, path string, key string) (string, error) {
 	doc := etree.NewDocument()
 	var result string
@@ -38,6 +40,7 @@ func GetXPathAttr(file string, path string, key string) (string, error) {
 	return result, nil
 }
 
+// GetElementsLength - Getting length of array from element
 func GetElementsLength(file string, path string) int {
 	doc := etree.NewDocument()
 	var arr []string
@@ -50,6 +53,7 @@ func GetElementsLength(file string, path string) int {
 	return len(arr)
 }
 
+// GetChildElementsAttr - Getting Child element's Attr from given path & key
 func GetChildElementsAttr(file string, path string, value []string, key string) ([]string, error) {
 	doc := etree.NewDocument()
 	var result []string
@@ -68,6 +72,7 @@ func GetChildElementsAttr(file string, path string, value []string, key string) 
 	return result, nil
 }
 
+// GetXPathsAttr - Getting Attr from elements
 func GetXPathsAttr(file string, path string, key string) ([]string, error) {
 	doc := etree.NewDocument()
 	length := GetElementsLength(file, path)
@@ -77,11 +82,11 @@ func GetXPathsAttr(file string, path string, key string) ([]string, error) {
 	}
 	for i, e := range doc.FindElements(path) {
 		result[i] = e.SelectAttr(key).Value
-
 	}
 	return result, nil
 }
 
+// GetXPaths - Getting elements from given path
 func GetXPaths(file string, path string) ([]string, error) {
 	doc := etree.NewDocument()
 	length := GetElementsLength(file, path)
@@ -95,6 +100,7 @@ func GetXPaths(file string, path string) ([]string, error) {
 	return result, nil
 }
 
+// GetParentTags - Getting parent element's tag
 func GetParentTags(file string, path string, element string) ([]string, error) {
 	doc := etree.NewDocument()
 	var result []string
@@ -109,6 +115,7 @@ func GetParentTags(file string, path string, element string) ([]string, error) {
 	return result, nil
 }
 
+// GetParentText - Getting parent element in text
 func GetParentText(file string, path string, element string) (string, error) {
 	doc := etree.NewDocument()
 	var result string
@@ -124,9 +131,10 @@ func GetParentText(file string, path string, element string) (string, error) {
 	return result, nil
 }
 
-func WriteStringtoFile(input string, output_file string) {
-	f, err := os.Create(output_file)
-	check_panic(err)
+// WriteStringtoFile - Writing file
+func WriteStringtoFile(input string, outputFile string) {
+	f, err := os.Create(outputFile)
+	checkPanic(err)
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
@@ -140,7 +148,7 @@ func check(e error) {
 	}
 }
 
-func check_panic(e error) {
+func checkPanic(e error) {
 	if e != nil {
 		panic(e)
 	}
@@ -153,4 +161,11 @@ func contains(s []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func defaultValue(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
 }

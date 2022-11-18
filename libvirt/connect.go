@@ -1,3 +1,4 @@
+// Package libvirt - using binding library
 package libvirt
 
 import (
@@ -7,11 +8,12 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
+// Connection model
 type Connection struct {
-	Host      string // e.g. "qemu+tls://domain/system, qemu+libssh2://user@host/system?known_hosts=/home/user/.ssh/known_hosts"
-	Username  string
-	Passwd    string
-	Conn_type string // 'ssh' or 'tls'
+	Host     string // e.g. "qemu+tls://domain/system, qemu+libssh2://user@host/system?known_hosts=/home/user/.ssh/known_hosts"
+	Username string
+	Passwd   string
+	ConnType string // 'ssh' or 'tls'
 }
 
 // TODO : implement singleton pattern & and Mutex lock
@@ -22,22 +24,23 @@ type Connection struct {
 // 	c.Conn_type = conn_type
 // }
 
+// CreateCompute - Creating connection
 func CreateCompute(compute Connection) *libvirt.Connect {
 	var conn *libvirt.Connect
 
-	if compute.Conn_type == "ssh" {
-		conn = ssh_connect(compute.Username, compute.Host)
-	} else if compute.Conn_type == "tls" {
-		conn = tls_connect(compute.Username, compute.Passwd, compute.Host)
-	} else if compute.Conn_type == "socket" {
-		conn = socket_connect()
+	if compute.ConnType == "ssh" {
+		conn = sshConnect(compute.Username, compute.Host)
+	} else if compute.ConnType == "tls" {
+		conn = tlsConnect(compute.Username, compute.Passwd, compute.Host)
+	} else if compute.ConnType == "socket" {
+		conn = socketConnect()
 	} else {
 		log.Fatal("Invalid connection type")
 	}
 	return conn
 }
 
-func socket_connect() *libvirt.Connect {
+func socketConnect() *libvirt.Connect {
 	uri := "qemu:///system"
 
 	conn, err := libvirt.NewConnect(uri)
@@ -57,7 +60,7 @@ ld: warning: -no_pie is deprecated when targeting new OS versions
 nc: /usr/local/var/run/libvirt/libvirt-sock: No such file or directory: Input/output error')
 exit status 1
 */
-func ssh_connect(username string, host string) *libvirt.Connect {
+func sshConnect(username string, host string) *libvirt.Connect {
 	// uri := "qemu+libssh2://user@host/system?known_hosts=/home/user/.ssh/known_hosts"
 	uri := fmt.Sprintf("qemu+ssh://%s@%s/system", username, host)
 
@@ -69,7 +72,7 @@ func ssh_connect(username string, host string) *libvirt.Connect {
 	return conn
 }
 
-func tls_connect(auth_name string, passphase string, host string) *libvirt.Connect {
+func tlsConnect(authName string, passphase string, host string) *libvirt.Connect {
 	/*
 		Reference link to see how function use
 		https://github.com/libvirt/libvirt-go/blob/master/integration_test.go
@@ -78,7 +81,7 @@ func tls_connect(auth_name string, passphase string, host string) *libvirt.Conne
 	callback := func(creds []*libvirt.ConnectCredential) {
 		for _, cred := range creds {
 			if cred.Type == libvirt.CRED_AUTHNAME {
-				cred.Result = auth_name
+				cred.Result = authName
 				cred.ResultLen = len(cred.Result)
 			} else if cred.Type == libvirt.CRED_PASSPHRASE {
 				cred.Result = passphase
