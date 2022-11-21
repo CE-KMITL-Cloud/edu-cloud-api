@@ -28,13 +28,14 @@ type Connection struct {
 func CreateCompute(compute Connection) *libvirt.Connect {
 	var conn *libvirt.Connect
 
-	if compute.ConnType == "ssh" {
+	switch compute.ConnType {
+	case "ssh":
 		conn = sshConnect(compute.Username, compute.Host)
-	} else if compute.ConnType == "tls" {
+	case "tls":
 		conn = tlsConnect(compute.Username, compute.Passwd, compute.Host)
-	} else if compute.ConnType == "socket" {
+	case "socket":
 		conn = socketConnect()
-	} else {
+	default:
 		log.Fatal("Invalid connection type")
 	}
 	return conn
