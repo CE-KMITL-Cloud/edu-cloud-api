@@ -60,6 +60,15 @@ func GetInstanceXML(conn *libvirt.Connect, name string) string {
 	return xml
 }
 
+// GetInstanceXMLSecure - Getting XML from specific instance's name with secure flag
+func GetInstanceXMLSecure(conn *libvirt.Connect, name string) string {
+	inst := GetInstance(conn, name)
+	xml, err := inst.GetXMLDesc(libvirt.DOMAIN_XML_SECURE)
+	check(err)
+	WriteStringtoFile(xml, fmt.Sprintf("xml/instance/%s_inst_secure.xml", name))
+	return xml
+}
+
 // GetInstanceStatus - Getting Instance status
 func GetInstanceStatus(conn *libvirt.Connect, name string) libvirt.DomainState {
 	inst := GetInstance(conn, name)
@@ -99,16 +108,97 @@ func GetInstanceUUID(conn *libvirt.Connect, name string) string {
 	return uuid
 }
 
-// StartInstance - If the call succeeds the domain moves from the defined to the running domains pools.
-func StartInstance(conn *libvirt.Connect, name string) {
+// Start - If the call succeeds the domain moves from the defined to the running domains pools.
+func Start(conn *libvirt.Connect, name string) {
 	dom := GetInstance(conn, name)
 	err := dom.Create()
 	check(err)
 }
 
-// ShutdownInstance - Shutdown a domain, the domain object is still usable thereafter, but the domain OS is being stopped
-func ShutdownInstance(conn *libvirt.Connect, name string) {
+// Shutdown - Shutdown a domain, the domain object is still usable thereafter, but the domain OS is being stopped
+func Shutdown(conn *libvirt.Connect, name string) {
 	dom := GetInstance(conn, name)
 	err := dom.Shutdown()
 	check(err)
+}
+
+// ForceShutdown - Destroy the domain object. The running instance is shutdown if not down already and all resources used by it are given back to the hypervisor
+func ForceShutdown(conn *libvirt.Connect, name string) {
+	dom := GetInstance(conn, name)
+	err := dom.Destroy()
+	check(err)
+}
+
+// Suspend - Suspends an active domain, the process is frozen without further access to CPU resources and I/O but the memory used by the domain at the hypervisor level will stay allocated
+func Suspend(conn *libvirt.Connect, name string) {
+	dom := GetInstance(conn, name)
+	err := dom.Suspend()
+	check(err)
+}
+
+// Resume - Resume a suspended domain, the process is restarted from the state where it was frozen
+func Resume(conn *libvirt.Connect, name string) {
+	dom := GetInstance(conn, name)
+	err := dom.Resume()
+	check(err)
+}
+
+// InstanceGraphicTypes - Get Instance's graphics type
+func InstanceGraphicTypes(conn *libvirt.Connect, name string) string {
+	GetInstanceXML(conn, name)
+	consoleType, err := GetXPathAttr(fmt.Sprintf("xml/instance/%s_inst.xml", name), "/domain/devices/graphics", "type")
+	check(err)
+	if consoleType == "" {
+		consoleType = "None"
+	}
+	return consoleType
+}
+
+// InstanceGraphicListen - Get Instance's graphics listener address
+func InstanceGraphicListen(conn *libvirt.Connect, name string) string {
+	GetInstanceXML(conn, name)
+	listenerAddr, err := GetXPathAttr(fmt.Sprintf("xml/instance/%s_inst.xml", name), "/domain/devices/graphics", "listen")
+	check(err)
+	if listenerAddr == "" {
+		addr, addrErr := GetXPathAttr(fmt.Sprintf("xml/instance/%s_inst.xml", name), "/domain/devices/graphics/listen", "address")
+		check(addrErr)
+		if addr != "" {
+			return addr
+		}
+		listenerAddr = "None"
+	}
+	return listenerAddr
+}
+
+// InstanceGraphicPort - Get Instance's graphics port
+func InstanceGraphicPort(conn *libvirt.Connect, name string) string {
+	GetInstanceXML(conn, name)
+	consolePort, err := GetXPathAttr(fmt.Sprintf("xml/instance/%s_inst.xml", name), "/domain/devices/graphics", "port")
+	check(err)
+	if consolePort == "" {
+		consolePort = "None"
+	}
+	return consolePort
+}
+
+// DomainName - Get Domain's name
+func DomainName(conn *libvirt.Connect, name string) string {
+	GetInstanceXML(conn, name)
+	domName, err := GetXPath(fmt.Sprintf("xml/instance/%s_inst.xml", name), "/domain/name")
+	check(err)
+	if domName == "" {
+		domName = "NoName"
+	}
+	return domName
+}
+
+// InstanceGraphicPasswd - Get Instance's graphics password
+func InstanceGraphicPasswd(conn *libvirt.Connect, name string) string {
+	GetInstanceXMLSecure(conn, name)
+	password, err := GetXPathAttr(fmt.Sprintf("xml/instance/%s_inst_secure.xml", name), "/domain/devices/graphics", "passwd")
+	check(err)
+	if password == "" {
+		password = "None"
+	}
+	return password
 }
