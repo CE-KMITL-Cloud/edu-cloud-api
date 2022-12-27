@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	virt "github.com/edu-cloud-api/libvirt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
 )
@@ -28,26 +27,7 @@ func main() {
 	}
 
 	// Collecting variables from .env
-	AUTHNAME := getFromENV("AUTHNAME")
-	PASSPHASE := getFromENV("PASSPHASE")
-
-	// test object
-	objConnection := virt.Connection{
-		Host: "captain-2.ce.kmitl.cloud",
-		// Host: "node-02.ce.kmitl.cloud", // 10.55.0.12
-		// Host: "10.20.20.100",
-		Username: AUTHNAME,
-		// Username:  "ce",
-		Passwd:   PASSPHASE,
-		ConnType: "tls",
-	}
-
-	// Start connection with libvirt
-	conn := virt.CreateCompute(objConnection)
-	log.Println("connection pointer :", conn)
-
-	// Need to close connection after process done
-	defer conn.Close()
+	// AUTHNAME := getFromENV("AUTHNAME")
 
 	app := fiber.New()
 

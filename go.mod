@@ -3,10 +3,8 @@ module github.com/edu-cloud-api
 go 1.19
 
 require (
-	github.com/beevik/etree v1.1.0
 	github.com/gofiber/fiber/v2 v2.37.0
 	github.com/spf13/viper v1.13.0
-	libvirt.org/go/libvirt v1.8007.0
 )
 
 require (
