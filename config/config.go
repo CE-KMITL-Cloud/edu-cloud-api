@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// getFromENV - get item from .env
-func getFromENV(item string) string {
+// GetFromENV - get item from .env
+func GetFromENV(item string) string {
 	viper.SetConfigFile(".env")
 	err := viper.ReadInConfig()
 	if err != nil {

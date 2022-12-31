@@ -8,12 +8,10 @@ import (
 
 // SetupRoutes - setting up router
 func SetupRoutes(app *fiber.App) {
-	api := app.Group("/api")
-
 	// Health-Check
-	api.Get("/", handler.Healthy)
+	app.Get("/", handler.Healthy)
 
 	// Access
-	access := api.Group("/access")
+	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
 }
