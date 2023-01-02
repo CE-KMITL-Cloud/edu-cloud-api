@@ -1,4 +1,4 @@
-// Package router - for routing
+// Package router - routing paths
 package router
 
 import (

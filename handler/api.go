@@ -1,4 +1,4 @@
-// Package handler - for handling any context
+// Package handler - handling context
 package handler
 
 import "github.com/gofiber/fiber/v2"

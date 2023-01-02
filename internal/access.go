@@ -1,4 +1,4 @@
-// Package internal - for handling any context
+// Package internal - internal functions
 package internal
 
 import (
@@ -9,12 +9,13 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/edu-cloud-api/database"
 	"github.com/edu-cloud-api/model"
 )
 
-// GetTicket - get ticket & CSRF prevention token from Proxmox
+// GetTicket - get cookie & CSRF prevention token from Proxmox
 func GetTicket(hostURL string, data url.Values) (model.Ticket, error) {
-	// Return object
+	// Return objects
 	token := model.Token{}
 	ticket := model.Ticket{
 		Token: token,
@@ -51,7 +52,9 @@ func GetTicket(hostURL string, data url.Values) (model.Ticket, error) {
 		return ticket, marshalErr
 	}
 
-	log.Println(ticket)
+	// Update CSRFPreventionToken
+	user := &model.User{}
+	database.DB.Db.Model(&user).Where("username = ?", ticket.Token.Username).Update("csrf_token", ticket.Token.CSRFPreventionToken)
 
 	return ticket, nil
 }

@@ -1,8 +1,7 @@
-// Package handler - interface for using with router
+// Package handler - handling context
 package handler
 
 import (
-	"log"
 	"net/url"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// GetTicket - interface for GetTicket func
+// GetTicket - handler GetTicket function
 func GetTicket(c *fiber.Ctx) error {
 	// Get host's URL
 	hostURL := config.GetFromENV("proxmoxHost")
@@ -33,6 +32,7 @@ func GetTicket(c *fiber.Ctx) error {
 	data.Set("username", userLogin.Username)
 	data.Set("password", userLogin.Password)
 
+	// Getting Ticket
 	ticket, err := internal.GetTicket(urlStr, data)
 	if err != nil {
 		return err
@@ -45,8 +45,6 @@ func GetTicket(c *fiber.Ctx) error {
 	cookie.Domain = u.Hostname()
 	cookie.Expires = time.Now().Add(time.Hour)
 	c.Cookie(cookie)
-
-	log.Println(cookie)
 
 	return c.JSON(ticket)
 }
