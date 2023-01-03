@@ -1,1 +1,1 @@
-# edu-cloud-api
+# EDU-CLOUD API

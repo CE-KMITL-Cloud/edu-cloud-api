@@ -1,6 +1,7 @@
 // Package model - structs
 package model
 
+// DB's table
 // User - struct for user's info
 type User struct {
 	Username            string `json:"username"`

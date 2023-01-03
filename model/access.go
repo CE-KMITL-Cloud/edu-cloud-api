@@ -13,7 +13,7 @@ type Token struct {
 	CSRFPreventionToken string `json:"CSRFPreventionToken"`
 }
 
-// Login - struct for authentication
+// Login - struct for authentication to Proxmox
 type Login struct {
 	Username string `form:"username"`
 	Password string `form:"password"`

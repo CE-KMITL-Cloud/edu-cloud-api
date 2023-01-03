@@ -21,7 +21,7 @@ func GetTicket(c *fiber.Ctx) error {
 	u.Path = "/api2/json/access/ticket"
 	urlStr := u.String()
 
-	// Get body parser
+	// Getting request's body
 	userLogin := new(model.Login)
 	if err := c.BodyParser(userLogin); err != nil {
 		return err
@@ -40,7 +40,7 @@ func GetTicket(c *fiber.Ctx) error {
 
 	// Set Cookie
 	cookie := new(fiber.Cookie)
-	cookie.Name = "PVEAuthCookie"
+	cookie.Name = "PVEAuthCookie" // should this display in source code?
 	cookie.Value = ticket.Token.Cookie
 	cookie.Domain = u.Hostname()
 	cookie.Expires = time.Now().Add(time.Hour)
