@@ -12,9 +12,15 @@ import (
 )
 
 // GetTicket - handler GetTicket function
+// GET /api2/json/access/ticket
+/*
+	using Request's Body
+	@username : account's username
+	@password : account's password
+*/
 func GetTicket(c *fiber.Ctx) error {
 	// Get host's URL
-	hostURL := config.GetFromENV("proxmoxHost")
+	hostURL := config.GetFromENV("PROXMOX_HOST")
 
 	// Construct URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -39,12 +45,18 @@ func GetTicket(c *fiber.Ctx) error {
 	}
 
 	// Set Cookie
-	cookie := new(fiber.Cookie)
-	cookie.Name = "PVEAuthCookie" // should this display in source code?
-	cookie.Value = ticket.Token.Cookie
-	cookie.Domain = u.Hostname()
-	cookie.Expires = time.Now().Add(time.Hour)
-	c.Cookie(cookie)
+	c.Cookie(&fiber.Cookie{
+		Name:    "PVEAuthCookie",
+		Value:   ticket.Token.Cookie,
+		Expires: time.Now().Add(time.Hour * 4),
+	})
 
-	return c.JSON(ticket)
+	// Set CSRF Prevention Token
+	c.Cookie(&fiber.Cookie{
+		Name:    "CSRFPreventionToken",
+		Value:   ticket.Token.CSRFPreventionToken,
+		Expires: time.Now().Add(time.Hour * 4),
+	})
+
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Got Ticket"})
 }

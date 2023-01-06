@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/edu-cloud-api/database"
 	"github.com/edu-cloud-api/model"
 )
 
@@ -51,10 +50,5 @@ func GetTicket(hostURL string, data url.Values) (model.Ticket, error) {
 	if marshalErr := json.Unmarshal(body, &ticket); marshalErr != nil {
 		return ticket, marshalErr
 	}
-
-	// Update CSRFPreventionToken
-	user := &model.User{}
-	database.DB.Db.Model(&user).Where("username = ?", ticket.Token.Username).Update("csrf_token", ticket.Token.CSRFPreventionToken)
-
 	return ticket, nil
 }

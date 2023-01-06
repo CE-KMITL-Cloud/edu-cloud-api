@@ -14,4 +14,8 @@ func SetupRoutes(app *fiber.App) {
 	// Access
 	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
+
+	// VM
+	vm := app.Group("/vm")
+	vm.Get("/list", handler.GetVMs)
 }

@@ -12,6 +12,9 @@ import (
 func main() {
 	database.ConnectDb()
 	app := fiber.New()
+	// app.Use(encryptcookie.New(encryptcookie.Config{
+	// 	Key: "secret-thirty-2-character-string",
+	// }))
 
 	router.SetupRoutes(app)
 	log.Fatal(app.Listen(":3001"))

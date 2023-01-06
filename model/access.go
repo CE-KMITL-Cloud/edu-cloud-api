@@ -1,6 +1,12 @@
 // Package model - structs
 package model
 
+import (
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+)
+
 // Ticket - struct for getting access token
 type Ticket struct {
 	Token Token `json:"data"`
@@ -17,4 +23,10 @@ type Token struct {
 type Login struct {
 	Username string `form:"username"`
 	Password string `form:"password"`
+}
+
+// Cookies - struct for parsing Cookies
+type Cookies struct {
+	Cookie              http.Cookie
+	CSRFPreventionToken fiber.Cookie
 }
