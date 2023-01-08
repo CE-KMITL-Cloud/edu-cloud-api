@@ -2,90 +2,158 @@
 package internal
 
 import (
+	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
-	"github.com/edu-cloud-api/database"
 	"github.com/edu-cloud-api/model"
 )
 
-// GetVM - GET /api2/json/nodes/{node}/qemu/{vmid}
-// ! need to re-think about how we can get specific vm's info
-// func GetVM(hostURL string, user model.User) {
-// 	// Set Header
-// 	log.Println(user.CSRFPreventionToken)
-
-// 	// Construct request
-// 	resp, err := http.Get(hostURL)
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-
-// 	// We Read the response body on the line below.
-// 	body, err := ioutil.ReadAll(resp.Body)
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-
-// 	// Convert the body to type string
-// 	sb := string(body)
-// 	log.Print(sb)
-// }
+// GetVM - GET /api2/json/nodes/{node}/qemu/{vmid}/status/current
 
 // GetVMs - GET /api2/json/nodes/{node}/qemu
-func GetVMs(hostURL, username string, cookies model.Cookies) {
-	//
-	user := model.User{}
-	database.DB.Db.Find(&user, "username = ?", username)
-	log.Println(user)
+func GetVMs(url, username string, cookies model.Cookies) (model.VM, error) {
+	// TODO: should return only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
+
+	// Return objects
+	info := model.VM{}
 
 	// Construct new request
 	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, hostURL, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return info, err
 	}
 
 	// Getting cookie
-	log.Println(cookies)
 	req.AddCookie(&cookies.Cookie)
 	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
 
 	// GET request
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalln(err)
+	resp, sendErr := client.Do(req)
+	if sendErr != nil {
+		return info, sendErr
 	}
 	defer resp.Body.Close()
 
 	// If not 200 OK then log error
 	if resp.StatusCode != 200 {
-		log.Fatalln("error: with status", resp.Status)
+		log.Println("error: with status", resp.Status)
+		return info, errors.New(resp.Status)
 	}
 
 	// We Read the response body on the line below.
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return info, readErr
 	}
-	// Convert the body to type string
-	sb := string(body)
-	log.Print(sb)
-	// // Unmarshal body to struct
-	// if marshalErr := json.Unmarshal(body, &ticket); marshalErr != nil {
-	// 	return ticket, marshalErr
-	// }
+
+	// Unmarshal body to struct
+	if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
+		return info, marshalErr
+	}
+	return info, nil
 }
 
 // // CreateVM - POST /api2/json/nodes/{node}/qemu
 // func CreateVM()
 
-// // DeleteVM - DELETE /api2/json/nodes/{node}/qemu/{vmid}
-// func DeleteVM()
+// DeleteVM - DELETE /api2/json/nodes/{node}/qemu/{vmid}
+func DeleteVM(url string, cookies model.Cookies) (model.VMResponse, error) {
+	// TODO: should able to delete only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
 
-// // CloneVM - POST /api2/json/nodes/{node}/qemu/{vmid}/clone
-// func CloneVM()
+	// Return objects
+	response := model.VMResponse{}
+
+	// Construct new request
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return response, err
+	}
+
+	// Getting cookie
+	req.AddCookie(&cookies.Cookie)
+	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+
+	// DELETE request
+	resp, sendErr := client.Do(req)
+	if sendErr != nil {
+		return response, sendErr
+	}
+	defer resp.Body.Close()
+
+	// If not 200 OK then log error
+	if resp.StatusCode != 200 {
+		log.Println("error: with status", resp.Status)
+		return response, errors.New(resp.Status)
+	}
+
+	// Read byte from body
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return response, readErr
+	}
+
+	// Unmarshal body to struct
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}
+
+// CloneVM - POST /api2/json/nodes/{node}/qemu/{vmid}/clone
+func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
+	// Return objects
+	response := model.VMResponse{}
+
+	// Construct new request
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data.Encode()))
+	if err != nil {
+		return response, err
+	}
+
+	// Getting cookie
+	req.AddCookie(&cookies.Cookie)
+	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// POST request
+	resp, sendErr := client.Do(req)
+	if sendErr != nil {
+		return response, sendErr
+	}
+	defer resp.Body.Close()
+
+	// If not 200 OK then log error
+	if resp.StatusCode != 200 {
+		log.Println("error: with status", resp.Status)
+		return response, errors.New(resp.Status)
+	}
+
+	// Read byte from body
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return response, readErr
+	}
+
+	// Unmarshal body to struct
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}
 
 // // CreateTemplate - POST /api2/json/nodes/{node}/qemu/{vmid}/template
 // func CreateTemplate()

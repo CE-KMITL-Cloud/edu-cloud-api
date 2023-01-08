@@ -13,37 +13,34 @@ import (
 )
 
 // GetTicket - get cookie & CSRF prevention token from Proxmox
-func GetTicket(hostURL string, data url.Values) (model.Ticket, error) {
+func GetTicket(url string, data url.Values) (model.Ticket, error) {
 	// Return objects
-	token := model.Token{}
-	ticket := model.Ticket{
-		Token: token,
-	}
+	ticket := model.Ticket{}
 
 	// Construct new request
 	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, hostURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	// POST request
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	defer resp.Body.Close()
 
 	// If not 200 OK then log error
 	if resp.StatusCode != 200 {
-		log.Fatalln("error: with status", resp.Status)
+		log.Println("error: with status", resp.Status)
 	}
 
 	// Read byte from body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 
 	// Unmarshal body to struct

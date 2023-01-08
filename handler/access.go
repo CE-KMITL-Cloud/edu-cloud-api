@@ -48,14 +48,14 @@ func GetTicket(c *fiber.Ctx) error {
 	c.Cookie(&fiber.Cookie{
 		Name:    "PVEAuthCookie",
 		Value:   ticket.Token.Cookie,
-		Expires: time.Now().Add(time.Hour * 4),
+		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
 	})
 
 	// Set CSRF Prevention Token
 	c.Cookie(&fiber.Cookie{
 		Name:    "CSRFPreventionToken",
 		Value:   ticket.Token.CSRFPreventionToken,
-		Expires: time.Now().Add(time.Hour * 4),
+		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
 	})
 
 	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Got Ticket"})
