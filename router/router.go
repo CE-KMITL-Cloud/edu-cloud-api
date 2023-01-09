@@ -17,8 +17,10 @@ func SetupRoutes(app *fiber.App) {
 
 	// VM
 	vm := app.Group("/vm")
-	// vm.Get("/info")
-	vm.Get("/list", handler.GetVMs)
-	vm.Post("/clone", handler.CloneVM)
+	vm.Get("/info", handler.GetVM)
+	vm.Get("/list", handler.GetVMList)
+	vm.Post("/create", handler.CreateVM)
 	vm.Delete("/destroy", handler.DeleteVM)
+	vm.Post("/clone", handler.CloneVM)
+	vm.Post("/template", handler.CreateTemplate)
 }
