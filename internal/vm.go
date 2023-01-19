@@ -14,7 +14,7 @@ import (
 )
 
 // GetVM - GET /api2/json/nodes/{node}/qemu/{vmid}/status/current
-func GetVM(url, username string, cookies model.Cookies) (model.VM, error) {
+func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	// TODO: should return only user's VM
 	// user := model.User{}
 	// database.DB.Db.Find(&user, "username = ?", username)
@@ -62,7 +62,7 @@ func GetVM(url, username string, cookies model.Cookies) (model.VM, error) {
 }
 
 // GetVMList - GET /api2/json/nodes/{node}/qemu
-func GetVMList(url, username string, cookies model.Cookies) (model.VMList, error) {
+func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
 	// TODO: should return only user's VM
 	// user := model.User{}
 	// database.DB.Db.Find(&user, "username = ?", username)

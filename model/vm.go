@@ -69,8 +69,9 @@ type VMResponse struct {
 
 // CloneBody - struct for request Cloning VM
 type CloneBody struct {
-	NewID uint32 `form:"newid"`
-	Name  string `form:"name"`
+	NewID  uint32 `form:"newid"`
+	Name   string `form:"name"`
+	Target string `form:"target"`
 }
 
 // CreateBody - struct for request Creating VM
@@ -85,4 +86,30 @@ type CreateBody struct {
 	CDROM   string `form:"cdrom"`
 	Net0    string `form:"net0"`
 	SCSIHW  string `form:"scsihw"`
+}
+
+// VMTemplate - struct for VM Template
+type VMTemplate struct {
+	Info VMTemplateInfo `json:"data"`
+}
+
+// VMTemplateInfo - VM Template detail info
+type VMTemplateInfo struct {
+	Template  uint8   `json:"template"` // {0, 1}
+	CPU       float64 `json:"cpu"`
+	NetOut    uint64  `json:"netout"`
+	DiskWrite uint64  `json:"diskwrite"`
+	UpTime    uint64  `json:"uptime"`
+	MaxMem    uint64  `json:"maxmem"`
+	Name      string  `json:"name"`
+	VMID      uint16  `json:"vmid"`
+	MaxDisk   uint64  `json:"maxdisk"`
+	Status    string  `json:"status"`
+	Disk      uint16  `json:"disk"`
+	DiskRead  uint64  `json:"diskread"`
+	CPUs      uint16  `json:"cpus"`
+	Mem       uint64  `json:"mem"`
+	NetIn     uint64  `json:"netin"`
+	QmpStatus string  `json:"qmpstatus"`
+	HA        HA      `json:"ha"`
 }
