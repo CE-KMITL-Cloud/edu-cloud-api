@@ -99,9 +99,6 @@ func GetVMList(c *fiber.Ctx) error {
 // CreateVM - Create VM on specific node
 // POST /api2/json/nodes/{node}/qemu
 /*
-	using Query Params
-	@node : node's name
-
 	using Request's Body
 	@vmid : VM's ID
 	@name : VM's name
@@ -126,10 +123,8 @@ func CreateVM(c *fiber.Ctx) error {
 	}
 	vmid := fmt.Sprint(createBody.VMID)
 
-	// Getting data from query & Mapping values
-	node := c.Query("node")
-
 	// TODO: Another work around here?
+	// Construct payload
 	data := url.Values{}
 	data.Set("vmid", vmid)
 	data.Set("name", createBody.Name)
@@ -141,12 +136,6 @@ func CreateVM(c *fiber.Ctx) error {
 	data.Set("cdrom", createBody.CDROM)
 	data.Set("net0", createBody.Net0)
 	data.Set("scsihw", createBody.SCSIHW)
-	log.Println("create body :", data)
-
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", node)
-	urlStr := u.String()
 
 	// Getting Cookie, CSRF Token
 	cookies := model.Cookies{
@@ -160,6 +149,18 @@ func CreateVM(c *fiber.Ctx) error {
 		},
 	}
 
+	// Getting target node from node allocation
+	target, nodeErr := internal.AllocateNode(cookies)
+	if nodeErr != nil {
+		return nodeErr
+	}
+	log.Println("create body :", data, "target node:", target)
+
+	// Construct URL
+	u, _ := url.ParseRequestURI(hostURL)
+	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", target)
+	urlStr := u.String()
+
 	// Getting info
 	info, err := internal.CreateVM(urlStr, data, cookies)
 	if err != nil {
@@ -170,9 +171,9 @@ func CreateVM(c *fiber.Ctx) error {
 	// Waiting until creating process has been complete
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go internal.StatusVM(node, vmid, []string{"created", "starting", "running"}, &wg, cookies)
+	go internal.StatusVM(target, vmid, []string{"created", "starting", "running"}, &wg, cookies)
 	wg.Wait()
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Creating new VMID: %s in %s successfully", vmid, node)})
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Creating new VMID: %s in %s successfully", vmid, target)})
 }
 
 // DeleteVM - Deleting specific VM
@@ -210,13 +211,13 @@ func DeleteVM(c *fiber.Ctx) error {
 	urlStr := u.String()
 
 	// First check that target VM has been stopped
-	info, err := internal.GetVM(urlStr, cookies)
+	vm, err := internal.GetVM(urlStr, cookies)
 	if err != nil {
 		return err
 	}
 
 	// If target VM's status is not "stopped" then return
-	if info.Info.Status != "stopped" {
+	if vm.Info.Status != "stopped" {
 		return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, node)})
 	}
 
@@ -250,7 +251,7 @@ func DeleteVM(c *fiber.Ctx) error {
 	@newid : new VM's ID
 	@name : VM's name
 */
-// TODO : Able to clone only VM Template
+// TODO : Able to clone only VM Template : check template == 1
 func CloneVM(c *fiber.Ctx) error {
 	// Get host's URL
 	hostURL := config.GetFromENV("PROXMOX_HOST")
@@ -266,17 +267,6 @@ func CloneVM(c *fiber.Ctx) error {
 	node := c.Query("node")
 	vmid := c.Query("vmid")
 
-	data := url.Values{}
-	data.Set("newid", newid)
-	data.Set("name", cloneBody.Name)
-	data.Set("target", cloneBody.Target)
-	log.Println("clone body :", data)
-
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid)
-	urlStr := u.String()
-
 	// Getting Cookie, CSRF Token
 	cookies := model.Cookies{
 		Cookie: http.Cookie{
@@ -288,6 +278,24 @@ func CloneVM(c *fiber.Ctx) error {
 			Value: c.Cookies("CSRFPreventionToken"),
 		},
 	}
+
+	// Getting target node from node allocation
+	target, nodeErr := internal.AllocateNode(cookies)
+	if nodeErr != nil {
+		return nodeErr
+	}
+
+	// Construct payload
+	data := url.Values{}
+	data.Set("newid", newid)
+	data.Set("name", cloneBody.Name)
+	data.Set("target", target)
+	log.Println("clone body :", data)
+
+	// Construct URL
+	u, _ := url.ParseRequestURI(hostURL)
+	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid)
+	urlStr := u.String()
 
 	// Getting info
 	info, err := internal.CloneVM(urlStr, data, cookies)
@@ -301,7 +309,7 @@ func CloneVM(c *fiber.Ctx) error {
 	wg.Add(1)
 	go internal.StatusVM(node, newid, []string{"created", "starting", "running"}, &wg, cookies)
 	wg.Wait()
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Cloning new VMID: %s to %s successfully", newid, cloneBody.Target)})
+	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Cloning new VMID: %s to %s successfully", newid, target)})
 }
 
 // CreateTemplate - Templating specific VM
@@ -311,7 +319,6 @@ func CloneVM(c *fiber.Ctx) error {
 	@node : node's name
 	@vmid : VM's ID
 */
-// TODO : make sure that VM has stopped before start templating
 func CreateTemplate(c *fiber.Ctx) error {
 	// Get host's URL
 	hostURL := config.GetFromENV("PROXMOX_HOST")
@@ -338,13 +345,13 @@ func CreateTemplate(c *fiber.Ctx) error {
 	urlStr := u.String()
 
 	// First check that target VM has been stopped
-	info, err := internal.GetVM(urlStr, cookies)
+	vm, err := internal.GetVM(urlStr, cookies)
 	if err != nil {
 		return err
 	}
 
 	// If target VM's status is not "stopped" then return
-	if info.Info.Status != "stopped" {
+	if vm.Info.Status != "stopped" {
 		return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, node)})
 	}
 

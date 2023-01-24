@@ -60,7 +60,7 @@ func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies 
 			}
 
 			// Parsing response
-			info := model.VM{}
+			vm := model.VM{}
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				log.Println(readErr)
@@ -68,22 +68,22 @@ func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies 
 			log.Println(string(body))
 
 			// Unmarshal body to struct
-			if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
+			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
 				log.Println(marshalErr)
 			}
 
 			// logging status of target VM
-			log.Printf("Status of %s in %s : %s", vmid, node, info.Info.Status)
+			log.Printf("Status of %s in %s : %s", vmid, node, vm.Info.Status)
 
 			// if lock field is null => unlocked
-			if info.Info.Lock == "" {
+			if vm.Info.Lock == "" {
 				log.Printf("VMID : %s from %s has been unlocked", vmid, node)
 				return
 			}
 
 			// incase status is in successful status list
-			if config.Contains(statuses, info.Info.Status) {
-				log.Printf("Break status : %s", info.Info.Status)
+			if config.Contains(statuses, vm.Info.Status) {
+				log.Printf("Break status : %s", vm.Info.Status)
 				return
 			}
 
@@ -143,7 +143,7 @@ func DeleteCompletely(node, vmid string, wg *sync.WaitGroup, cookies model.Cooki
 			}
 
 			// Parsing response
-			info := model.VM{}
+			vm := model.VM{}
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				log.Println(readErr)
@@ -151,15 +151,15 @@ func DeleteCompletely(node, vmid string, wg *sync.WaitGroup, cookies model.Cooki
 			log.Println(string(body))
 
 			// Unmarshal body to struct
-			if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
+			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
 				log.Println(marshalErr)
 			}
 
 			// logging status of target VM
-			log.Printf("Status of %s in %s : %s", vmid, node, info.Info.Status)
+			log.Printf("Status of %s in %s : %s", vmid, node, vm.Info.Status)
 
 			// if status field is "deleted" return
-			if info.Info.Status == "deleted" {
+			if vm.Info.Status == "deleted" {
 				log.Printf("VMID : %s from %s has been deleted", vmid, node)
 				return
 			}
@@ -220,7 +220,7 @@ func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup
 			}
 
 			// Parsing response
-			info := model.VMTemplate{}
+			template := model.VMTemplate{}
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				log.Println(readErr)
@@ -228,22 +228,22 @@ func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup
 			log.Println(string(body))
 
 			// Unmarshal body to struct
-			if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
+			if marshalErr := json.Unmarshal(body, &template); marshalErr != nil {
 				log.Println(marshalErr)
 			}
 
 			// logging status of target VM
-			log.Printf("Status of %s in %s : %s", vmid, node, info.Info.Status)
+			log.Printf("Status of %s in %s : %s", vmid, node, template.Info.Status)
 
 			// If template = 1 : true -> templated completely
-			if info.Info.Template == 1 {
+			if template.Info.Template == 1 {
 				log.Printf("VMID : %s from %s has been templated", vmid, node)
 				return
 			}
 
 			// incase status is in successful status list
-			if config.Contains(statuses, info.Info.Status) {
-				log.Printf("Break status : %s", info.Info.Status)
+			if config.Contains(statuses, template.Info.Status) {
+				log.Printf("Break status : %s", template.Info.Status)
 				return
 			}
 

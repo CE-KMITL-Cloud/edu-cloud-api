@@ -7,7 +7,6 @@ type VM struct {
 }
 
 // VMInfo - struct for VM's info
-// TODO : finalize are there fields need to added
 type VMInfo struct {
 	CPU            float64 `json:"cpu"`
 	NetOut         uint64  `json:"netout"`
@@ -69,9 +68,8 @@ type VMResponse struct {
 
 // CloneBody - struct for request Cloning VM
 type CloneBody struct {
-	NewID  uint32 `form:"newid"`
-	Name   string `form:"name"`
-	Target string `form:"target"`
+	NewID uint32 `form:"newid"`
+	Name  string `form:"name"`
 }
 
 // CreateBody - struct for request Creating VM
