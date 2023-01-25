@@ -85,7 +85,7 @@ func AllocateNode(cookies model.Cookies) (string, error) {
 	for _, node := range nodeList {
 		freeMemoryPercent := (float64(node.MaxMem-node.Mem) / float64(node.MaxMem)) * 100
 		freeCPUPercent := (float64(node.MaxCPU-node.CPU) / float64(node.MaxCPU)) * 100
-		// log.Printf("node: %s, free mem: %f, free cpu: %f", node.Node, freeMemoryPercent, freeCPUPercent)
+		log.Printf("node: %s, free mem: %f, free cpu: %f", node.Node, freeMemoryPercent, freeCPUPercent)
 		if freeMemoryPercent > maxFreeMemoryPercent || (freeMemoryPercent == maxFreeMemoryPercent && freeCPUPercent > maxFreeCPUPercent) {
 			maxFreeMemoryPercent = freeMemoryPercent
 			maxFreeCPUPercent = freeCPUPercent
@@ -93,8 +93,8 @@ func AllocateNode(cookies model.Cookies) (string, error) {
 			// log.Printf("node: %s, Max free mem: %f, Max free cpu: %f", selectedNode.Node, maxFreeMemoryPercent, maxFreeCPUPercent)
 		}
 	}
-	// log.Println("the best node is:", selectedNode.Node)
 
 	// return the best node's name
+	log.Printf("Return selected node : %s", selectedNode.Node)
 	return selectedNode.Node, nil
 }

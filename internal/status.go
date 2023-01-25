@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/edu-cloud-api/config"
@@ -16,9 +15,8 @@ import (
 )
 
 // StatusVM - for checking status of any process from specific VM
-func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies model.Cookies) {
-	defer wg.Done()
-	log.Println("Checking status...")
+func StatusVM(node, vmid string, statuses []string, cookies model.Cookies) bool {
+	log.Println("Checking status ...")
 
 	// Timeout - Default set to 30 mins
 	timeoutCh := time.After(30 * time.Minute)
@@ -35,7 +33,7 @@ func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies 
 		select {
 		case <-timeoutCh:
 			log.Println("Timeout reached, Task not finished")
-			return
+			return false
 		default:
 			// check status of the vm
 			client := &http.Client{}
@@ -54,8 +52,7 @@ func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies 
 			}
 			defer resp.Body.Close()
 
-			// If not 200 OK then log error
-			if resp.StatusCode != 200 {
+			if resp.StatusCode != 500 && resp.StatusCode != 200 {
 				log.Println("error: with status", resp.Status)
 			}
 
@@ -65,7 +62,7 @@ func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies 
 			if readErr != nil {
 				log.Println(readErr)
 			}
-			log.Println(string(body))
+			// log.Println(string(body))
 
 			// Unmarshal body to struct
 			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
@@ -75,28 +72,31 @@ func StatusVM(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies 
 			// logging status of target VM
 			log.Printf("Status of %s in %s : %s", vmid, node, vm.Info.Status)
 
-			// if lock field is null => unlocked
-			if vm.Info.Lock == "" {
-				log.Printf("VMID : %s from %s has been unlocked", vmid, node)
-				return
+			if resp.StatusCode == 500 {
+				log.Println("error: with status", resp.Status)
 			}
 
 			// incase status is in successful status list
 			if config.Contains(statuses, vm.Info.Status) {
 				log.Printf("Break status : %s", vm.Info.Status)
-				return
+				return true
 			}
 
-			// Default setting : check every 15 sec
-			time.Sleep(15 * time.Second)
+			// if lock field is null => unlocked
+			if vm.Info.Lock == "" {
+				log.Printf("VMID : %s from %s has been unlocked", vmid, node)
+				return true
+			}
+
+			// Default setting : check every 5 sec
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
 
 // DeleteCompletely - for assuring that status of target VM has been deleted
-func DeleteCompletely(node, vmid string, wg *sync.WaitGroup, cookies model.Cookies) {
-	defer wg.Done()
-	log.Println("Checking delete status...")
+func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
+	log.Println("Checking delete status ...")
 
 	// Timeout - Default set to 10 mins
 	timeoutCh := time.After(10 * time.Minute)
@@ -113,7 +113,7 @@ func DeleteCompletely(node, vmid string, wg *sync.WaitGroup, cookies model.Cooki
 		select {
 		case <-timeoutCh:
 			log.Println("Timeout reached, Task not finished")
-			return
+			return false
 		default:
 			// check status of the vm
 			client := &http.Client{}
@@ -137,7 +137,7 @@ func DeleteCompletely(node, vmid string, wg *sync.WaitGroup, cookies model.Cooki
 				// TODO : Another work around on this?
 				if resp.StatusCode == 500 {
 					log.Printf("VMID : %s from %s is missing, Assume that VM has been deleted", vmid, node)
-					return
+					return true
 				}
 				log.Println("error: with status", resp.Status)
 			}
@@ -161,19 +161,18 @@ func DeleteCompletely(node, vmid string, wg *sync.WaitGroup, cookies model.Cooki
 			// if status field is "deleted" return
 			if vm.Info.Status == "deleted" {
 				log.Printf("VMID : %s from %s has been deleted", vmid, node)
-				return
+				return true
 			}
 
-			// Default setting : check every 5 sec
-			time.Sleep(5 * time.Second)
+			// Default setting : check every 1 sec
+			time.Sleep(time.Second)
 		}
 	}
 }
 
 // TemplateCompletely - for assuring that status of target VM has been templated
-func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup, cookies model.Cookies) {
-	defer wg.Done()
-	log.Println("Checking template status...")
+func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cookies) bool {
+	log.Println("Checking template status ...")
 
 	// Timeout - Default set to 10 mins
 	timeoutCh := time.After(10 * time.Minute)
@@ -190,7 +189,7 @@ func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup
 		select {
 		case <-timeoutCh:
 			log.Println("Timeout reached, Task not finished")
-			return
+			return false
 		default:
 			// check status of the vm
 			client := &http.Client{}
@@ -214,7 +213,7 @@ func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup
 				// TODO : Another work around on this?
 				if resp.StatusCode == 500 {
 					log.Printf("Error when templating VMID : %s from %s, Assume that VM has been templated", vmid, node)
-					return
+					return true
 				}
 				log.Println("error: with status", resp.Status)
 			}
@@ -225,7 +224,7 @@ func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup
 			if readErr != nil {
 				log.Println(readErr)
 			}
-			log.Println(string(body))
+			// log.Println(string(body))
 
 			// Unmarshal body to struct
 			if marshalErr := json.Unmarshal(body, &template); marshalErr != nil {
@@ -238,17 +237,84 @@ func TemplateCompletely(node, vmid string, statuses []string, wg *sync.WaitGroup
 			// If template = 1 : true -> templated completely
 			if template.Info.Template == 1 {
 				log.Printf("VMID : %s from %s has been templated", vmid, node)
-				return
+				return true
 			}
 
 			// incase status is in successful status list
 			if config.Contains(statuses, template.Info.Status) {
 				log.Printf("Break status : %s", template.Info.Status)
-				return
+				return true
 			}
 
-			// Default setting : check every 5 sec
-			time.Sleep(5 * time.Second)
+			// Default setting : check every 1 sec
+			time.Sleep(time.Second)
 		}
 	}
+}
+
+// IsTemplate - Checking VM template from VMID
+func IsTemplate(node, vmid string, cookies model.Cookies) bool {
+	log.Println("Checking VM template from VMID ...")
+
+	// Get host's URL
+	hostURL := config.GetFromENV("PROXMOX_HOST")
+
+	// Construct URL
+	u, _ := url.ParseRequestURI(hostURL)
+	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid)
+	urlStr := u.String()
+
+	// Timeout - Default set to 1 min
+	timeoutCh := time.After(time.Minute)
+	select {
+	case <-timeoutCh:
+		log.Println("Timeout reached, Task not finished")
+		return false
+	default:
+		// Check status of the vm
+		client := &http.Client{}
+		req, err := http.NewRequest(http.MethodGet, urlStr, nil)
+		if err != nil {
+			log.Println(err)
+		}
+
+		// Getting cookie
+		req.AddCookie(&cookies.Cookie)
+		req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+
+		resp, sendErr := client.Do(req)
+		if sendErr != nil {
+			log.Println(sendErr)
+		}
+		defer resp.Body.Close()
+
+		// If not 200 OK then log error
+		if resp.StatusCode != 200 {
+			log.Println("error: with status", resp.Status)
+			return false
+		}
+
+		// Parsing response
+		template := model.VMTemplate{}
+		body, readErr := ioutil.ReadAll(resp.Body)
+		if readErr != nil {
+			log.Println(readErr)
+		}
+		// log.Println(string(body))
+
+		// Unmarshal body to struct
+		if marshalErr := json.Unmarshal(body, &template); marshalErr != nil {
+			log.Println(marshalErr)
+		}
+
+		// If template = 1 : true -> templated completely
+		if template.Info.Template == 1 {
+			log.Printf("VMID : %s from %s has been templated", vmid, node)
+			return true
+		}
+
+		// Default setting : check every 1 sec
+		time.Sleep(time.Second)
+	}
+	return false
 }

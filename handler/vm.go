@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sync"
 
 	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/internal"
@@ -51,8 +50,10 @@ func GetVM(c *fiber.Ctx) error {
 	// Getting VM's info
 	info, err := internal.GetVM(urlStr, cookies)
 	if err != nil {
+		log.Println("Error: from getting VM's info :", err)
 		return err
 	}
+	log.Printf("Got info from vmid : %s", vmid)
 	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": info})
 }
 
@@ -91,8 +92,10 @@ func GetVMList(c *fiber.Ctx) error {
 	// Getting VM's info
 	info, err := internal.GetVMList(urlStr, cookies)
 	if err != nil {
+		log.Println("Error: from getting VM's list :", err)
 		return err
 	}
+	log.Printf("Got VM list from node : %s", node)
 	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": info})
 }
 
@@ -154,7 +157,7 @@ func CreateVM(c *fiber.Ctx) error {
 	if nodeErr != nil {
 		return nodeErr
 	}
-	log.Println("create body :", data, "target node:", target)
+	log.Printf("Create body : %s, target node : %s", data, target)
 
 	// Construct URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -164,16 +167,19 @@ func CreateVM(c *fiber.Ctx) error {
 	// Getting info
 	info, err := internal.CreateVM(urlStr, data, cookies)
 	if err != nil {
+		log.Println("Error: from creating VM :", err)
 		return err
 	}
 	log.Println(info)
 
 	// Waiting until creating process has been complete
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go internal.StatusVM(target, vmid, []string{"created", "starting", "running"}, &wg, cookies)
-	wg.Wait()
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Creating new VMID: %s in %s successfully", vmid, target)})
+	created := internal.StatusVM(target, vmid, []string{"created", "starting", "running"}, cookies)
+	if created {
+		log.Printf("Finished creating VMID : %s in %s", vmid, target)
+		return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Creating new VMID: %s in %s successfully", vmid, target)})
+	}
+	log.Printf("Error: Could not creating VMID : %s in %s", vmid, target)
+	return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s in %s has failed", vmid, target)})
 }
 
 // DeleteVM - Deleting specific VM
@@ -218,6 +224,7 @@ func DeleteVM(c *fiber.Ctx) error {
 
 	// If target VM's status is not "stopped" then return
 	if vm.Info.Status != "stopped" {
+		log.Printf("Error: deleting VMID : %s in %s due to VM has not been stopped", vmid, node)
 		return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, node)})
 	}
 
@@ -229,15 +236,18 @@ func DeleteVM(c *fiber.Ctx) error {
 	// Deleting target VM
 	_, deleteErr := internal.DeleteVM(deleteURLStr, cookies)
 	if deleteErr != nil {
+		log.Printf("Error: deleting VMID : %s in %s due to %s", vmid, node, deleteErr)
 		return deleteErr
 	}
 
 	// Check that target VM has been deleted completely yet
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go internal.DeleteCompletely(node, vmid, &wg, cookies)
-	wg.Wait()
-	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been deleted", vmid, node)})
+	deleted := internal.DeleteCompletely(node, vmid, cookies)
+	if deleted {
+		log.Printf("Finished deleting VMID : %s in %s", vmid, node)
+		return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been deleted", vmid, node)})
+	}
+	log.Printf("Error: Could not deleting VMID : %s in %s", vmid, node)
+	return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been deleted", vmid, node)})
 }
 
 // CloneVM - Cloning specific VM
@@ -251,7 +261,6 @@ func DeleteVM(c *fiber.Ctx) error {
 	@newid : new VM's ID
 	@name : VM's name
 */
-// TODO : Able to clone only VM Template : check template == 1
 func CloneVM(c *fiber.Ctx) error {
 	// Get host's URL
 	hostURL := config.GetFromENV("PROXMOX_HOST")
@@ -279,37 +288,69 @@ func CloneVM(c *fiber.Ctx) error {
 		},
 	}
 
-	// Getting target node from node allocation
-	target, nodeErr := internal.AllocateNode(cookies)
-	if nodeErr != nil {
-		return nodeErr
+	// Check VM Template from vmid
+	isTemplate := internal.IsTemplate(node, vmid, cookies)
+	if isTemplate {
+		// Getting target node from node allocation
+		target, nodeErr := internal.AllocateNode(cookies)
+		if nodeErr != nil {
+			log.Println("Error: allocate node :", nodeErr)
+			return nodeErr
+		}
+
+		// Construct VM List URL
+		vmListURL, _ := url.ParseRequestURI(hostURL)
+		vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", target)
+		vmListURLStr := vmListURL.String()
+
+		vmList, vmListErr := internal.GetVMList(vmListURLStr, cookies)
+		if vmListErr != nil {
+			return vmListErr
+		}
+
+		// Checking duplicate VM by VMID
+		var list []string
+		for _, v := range vmList.Info {
+			list = append(list, fmt.Sprintf("%d", v.VMID))
+		}
+		log.Printf("VMs in node : %s : %s", target, list)
+
+		if config.Contains(list, string(newid)) {
+			log.Println("Error: found duplicate VMID :", newid)
+			return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Found duplicate VMID: %s in %s", newid, target)})
+		}
+
+		// Construct payload
+		data := url.Values{}
+		data.Set("newid", newid)
+		data.Set("name", cloneBody.Name)
+		data.Set("target", target)
+		log.Println("clone body :", data)
+
+		// Construct URL
+		u, _ := url.ParseRequestURI(hostURL)
+		u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid)
+		urlStr := u.String()
+
+		// Getting info
+		info, err := internal.CloneVM(urlStr, data, cookies)
+		if err != nil {
+			log.Printf("Error: cloning VMID : %s in %s : %s", newid, target, err)
+			return err
+		}
+		log.Println(info)
+
+		// Waiting until cloning process has been completed
+		cloned := internal.StatusVM(target, newid, []string{"created", "starting", "running"}, cookies)
+		if cloned {
+			log.Printf("Finished cloning VMID : %s in %s", newid, target)
+			return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Cloning new VMID: %s to %s successfully", newid, target)})
+		}
+		log.Printf("Error: cloning VMID : %s in %s has failed", newid, target)
+		return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Cloning new VMID: %s to %s has failed", newid, target)})
 	}
-
-	// Construct payload
-	data := url.Values{}
-	data.Set("newid", newid)
-	data.Set("name", cloneBody.Name)
-	data.Set("target", target)
-	log.Println("clone body :", data)
-
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid)
-	urlStr := u.String()
-
-	// Getting info
-	info, err := internal.CloneVM(urlStr, data, cookies)
-	if err != nil {
-		return err
-	}
-	log.Println(info)
-
-	// Waiting until cloning process has been completed
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go internal.StatusVM(node, newid, []string{"created", "starting", "running"}, &wg, cookies)
-	wg.Wait()
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Cloning new VMID: %s to %s successfully", newid, target)})
+	log.Printf("Error: cloning VMID : %s from VMID : %s due to VM is not VM Template", newid, vmid)
+	return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": "Could not clone VM from Non-Template"})
 }
 
 // CreateTemplate - Templating specific VM
@@ -352,6 +393,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 
 	// If target VM's status is not "stopped" then return
 	if vm.Info.Status != "stopped" {
+		log.Printf("Error: Could not templating VMID : %s in %s due to VM hasn't been stopped", vmid, node)
 		return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, node)})
 	}
 
@@ -363,13 +405,16 @@ func CreateTemplate(c *fiber.Ctx) error {
 	// Templating VM
 	_, templateErr := internal.CreateTemplate(templateURLStr, cookies)
 	if templateErr != nil {
+		log.Printf("Error: Could not templating VMID : %s in %s : %s", vmid, node, templateErr)
 		return templateErr
 	}
 
 	// Waiting until templating process has been completed
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go internal.TemplateCompletely(node, vmid, []string{"created", "existing"}, &wg, cookies)
-	wg.Wait()
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": fmt.Sprintf("Target VMID: %s in %s has been templated", vmid, node)})
+	templated := internal.TemplateCompletely(node, vmid, []string{"created", "existing"}, cookies)
+	if templated {
+		log.Printf("Finished templating VMID : %s in %s", vmid, node)
+		return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been templated", vmid, node)})
+	}
+	log.Printf("Error: Could not templating VMID : %s in %s", vmid, node)
+	return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been templated correctly", vmid, node)})
 }

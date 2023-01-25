@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"log"
 	"net/url"
 	"time"
 
@@ -41,6 +42,7 @@ func GetTicket(c *fiber.Ctx) error {
 	// Getting Ticket
 	ticket, err := internal.GetTicket(urlStr, data)
 	if err != nil {
+		log.Println("Error: Could not getting ticket :", err)
 		return err
 	}
 
@@ -58,5 +60,6 @@ func GetTicket(c *fiber.Ctx) error {
 		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
 	})
 
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "Got Ticket"})
+	log.Printf("Finished getting ticket by user : %s", userLogin.Username)
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Got Ticket"})
 }

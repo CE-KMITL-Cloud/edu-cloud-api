@@ -13,6 +13,8 @@ import (
 	"github.com/edu-cloud-api/model"
 )
 
+// TODO : Apply request timeout
+
 // GetVM - GET /api2/json/nodes/{node}/qemu/{vmid}/status/current
 func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	// TODO: should return only user's VM
@@ -52,7 +54,7 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	if readErr != nil {
 		return info, readErr
 	}
-	log.Println(string(body))
+	// log.Println(string(body))
 
 	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
