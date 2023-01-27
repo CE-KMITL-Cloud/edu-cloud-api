@@ -73,7 +73,7 @@ func StatusVM(node, vmid string, statuses []string, cookies model.Cookies) bool 
 			log.Printf("Status of %s in %s : %s", vmid, node, vm.Info.Status)
 
 			if resp.StatusCode == 500 {
-				log.Println("error: with status", resp.Status)
+				log.Println("error: with status", resp.Status, "or could not found VM")
 			}
 
 			// incase status is in successful status list

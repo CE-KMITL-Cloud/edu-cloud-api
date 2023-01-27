@@ -42,7 +42,7 @@ func GetTicket(c *fiber.Ctx) error {
 	// Getting Ticket
 	ticket, err := internal.GetTicket(urlStr, data)
 	if err != nil {
-		log.Println("Error: Could not getting ticket :", err)
+		log.Println("Error: Could not get ticket :", err)
 		return err
 	}
 
