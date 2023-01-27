@@ -90,7 +90,6 @@ func AllocateNode(cookies model.Cookies) (string, error) {
 			maxFreeMemoryPercent = freeMemoryPercent
 			maxFreeCPUPercent = freeCPUPercent
 			selectedNode = node
-			// log.Printf("node: %s, Max free mem: %f, Max free cpu: %f", selectedNode.Node, maxFreeMemoryPercent, maxFreeCPUPercent)
 		}
 	}
 

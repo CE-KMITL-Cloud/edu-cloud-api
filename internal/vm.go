@@ -13,8 +13,6 @@ import (
 	"github.com/edu-cloud-api/model"
 )
 
-// TODO : Apply request timeout
-
 // GetVM - GET /api2/json/nodes/{node}/qemu/{vmid}/status/current
 func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	// TODO: should return only user's VM
@@ -245,6 +243,51 @@ func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMRespon
 
 // CreateTemplate - POST /api2/json/nodes/{node}/qemu/{vmid}/template
 func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error) {
+	// Return objects
+	response := model.VMResponse{}
+
+	// Construct new request
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return response, err
+	}
+
+	// Getting cookie
+	req.AddCookie(&cookies.Cookie)
+	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+
+	// POST request
+	resp, sendErr := client.Do(req)
+	if sendErr != nil {
+		return response, sendErr
+	}
+	defer resp.Body.Close()
+
+	// If not 200 OK then log error
+	if resp.StatusCode != 200 {
+		log.Println("error: with status", resp.Status)
+		return response, errors.New(resp.Status)
+	}
+
+	// Read byte from body
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return response, readErr
+	}
+
+	// Unmarshal body to struct
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}
+
+// PowerManagement - POST /api2/json/nodes/{node}/qemu/{vmid}/status/{action}
+/*
+	action : { start, stop, suspend, shutdown, resume, reboot, reset }
+*/
+func PowerManagement(url string, cookies model.Cookies) (model.VMResponse, error) {
 	// Return objects
 	response := model.VMResponse{}
 

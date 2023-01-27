@@ -80,11 +80,8 @@ func StatusVM(node, vmid string, statuses []string, cookies model.Cookies) bool 
 			if config.Contains(statuses, vm.Info.Status) {
 				log.Printf("Break status : %s", vm.Info.Status)
 				return true
-			}
-
-			// if lock field is null => unlocked
-			if vm.Info.Lock == "" {
-				log.Printf("VMID : %s from %s has been unlocked", vmid, node)
+			} else if vm.Info.Lock == "" {
+				log.Printf("VMID : %s from %s has been unlocked", vmid, node) // if lock field is null => unlocked
 				return true
 			}
 

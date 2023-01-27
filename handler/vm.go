@@ -178,7 +178,7 @@ func CreateVM(c *fiber.Ctx) error {
 		log.Printf("Finished creating VMID : %s in %s", vmid, target)
 		return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Creating new VMID: %s in %s successfully", vmid, target)})
 	}
-	log.Printf("Error: Could not creating VMID : %s in %s", vmid, target)
+	log.Printf("Error: Could not create VMID : %s in %s", vmid, target)
 	return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s in %s has failed", vmid, target)})
 }
 
@@ -246,7 +246,7 @@ func DeleteVM(c *fiber.Ctx) error {
 		log.Printf("Finished deleting VMID : %s in %s", vmid, node)
 		return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been deleted", vmid, node)})
 	}
-	log.Printf("Error: Could not deleting VMID : %s in %s", vmid, node)
+	log.Printf("Error: Could not delete VMID : %s in %s", vmid, node)
 	return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been deleted", vmid, node)})
 }
 
@@ -288,6 +288,7 @@ func CloneVM(c *fiber.Ctx) error {
 		},
 	}
 
+	// ! Check duplicate on every node
 	// Check VM Template from vmid
 	isTemplate := internal.IsTemplate(node, vmid, cookies)
 	if isTemplate {
@@ -300,7 +301,7 @@ func CloneVM(c *fiber.Ctx) error {
 
 		// Construct VM List URL
 		vmListURL, _ := url.ParseRequestURI(hostURL)
-		vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", target)
+		vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", target) // all node
 		vmListURLStr := vmListURL.String()
 
 		vmList, vmListErr := internal.GetVMList(vmListURLStr, cookies)
@@ -393,7 +394,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 
 	// If target VM's status is not "stopped" then return
 	if vm.Info.Status != "stopped" {
-		log.Printf("Error: Could not templating VMID : %s in %s due to VM hasn't been stopped", vmid, node)
+		log.Printf("Error: Could not template VMID : %s in %s due to VM hasn't been stopped", vmid, node)
 		return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, node)})
 	}
 
@@ -405,7 +406,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 	// Templating VM
 	_, templateErr := internal.CreateTemplate(templateURLStr, cookies)
 	if templateErr != nil {
-		log.Printf("Error: Could not templating VMID : %s in %s : %s", vmid, node, templateErr)
+		log.Printf("Error: Could not template VMID : %s in %s : %s", vmid, node, templateErr)
 		return templateErr
 	}
 
@@ -415,6 +416,6 @@ func CreateTemplate(c *fiber.Ctx) error {
 		log.Printf("Finished templating VMID : %s in %s", vmid, node)
 		return c.Status(200).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been templated", vmid, node)})
 	}
-	log.Printf("Error: Could not templating VMID : %s in %s", vmid, node)
+	log.Printf("Error: Could not template VMID : %s in %s", vmid, node)
 	return c.Status(500).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been templated correctly", vmid, node)})
 }

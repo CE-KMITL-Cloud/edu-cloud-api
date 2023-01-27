@@ -23,4 +23,14 @@ func SetupRoutes(app *fiber.App) {
 	vm.Delete("/destroy", handler.DeleteVM)
 	vm.Post("/clone", handler.CloneVM)
 	vm.Post("/template", handler.CreateTemplate)
+
+	// VM Power Management
+	// status := vm.Group("/status")
+	// status.Post("/start")
+	// status.Post("/stop")
+	// status.Post("/shutdown")
+	// status.Post("/suspend")
+	// status.Post("/resume")
+	// status.Post("/reboot")
+	// status.Post("/reset")
 }
