@@ -153,7 +153,7 @@ func CreateVM(c *fiber.Ctx) error {
 	}
 
 	// Getting target node from node allocation
-	target, nodeErr := internal.AllocateNode(cookies)
+	_, target, nodeErr := internal.AllocateNode(cookies)
 	if nodeErr != nil {
 		return nodeErr
 	}
@@ -293,32 +293,34 @@ func CloneVM(c *fiber.Ctx) error {
 	isTemplate := internal.IsTemplate(node, vmid, cookies)
 	if isTemplate {
 		// Getting target node from node allocation
-		target, nodeErr := internal.AllocateNode(cookies)
+		workerNodes, target, nodeErr := internal.AllocateNode(cookies)
 		if nodeErr != nil {
 			log.Println("Error: allocate node :", nodeErr)
 			return nodeErr
 		}
 
-		// Construct VM List URL
-		vmListURL, _ := url.ParseRequestURI(hostURL)
-		vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", target) // all node
-		vmListURLStr := vmListURL.String()
+		for _, workerNode := range workerNodes {
+			// Construct VM List URL
+			vmListURL, _ := url.ParseRequestURI(hostURL)
+			vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node) // all node
+			vmListURLStr := vmListURL.String()
 
-		vmList, vmListErr := internal.GetVMList(vmListURLStr, cookies)
-		if vmListErr != nil {
-			return vmListErr
-		}
+			vmList, vmListErr := internal.GetVMList(vmListURLStr, cookies)
+			if vmListErr != nil {
+				return vmListErr
+			}
 
-		// Checking duplicate VM by VMID
-		var list []string
-		for _, v := range vmList.Info {
-			list = append(list, fmt.Sprintf("%d", v.VMID))
-		}
-		log.Printf("VMs in node : %s : %s", target, list)
+			// Checking duplicate VM by VMID
+			var list []string
+			for _, v := range vmList.Info {
+				list = append(list, fmt.Sprintf("%d", v.VMID))
+			}
+			log.Printf("VMs in node : %s : %s", workerNode.Node, list)
 
-		if config.Contains(list, string(newid)) {
-			log.Println("Error: found duplicate VMID :", newid)
-			return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Found duplicate VMID: %s in %s", newid, target)})
+			if config.Contains(list, string(newid)) {
+				log.Println("Error: found duplicate VMID :", newid)
+				return c.Status(400).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Found duplicate VMID: %s in %s", newid, workerNode.Node)})
+			}
 		}
 
 		// Construct payload

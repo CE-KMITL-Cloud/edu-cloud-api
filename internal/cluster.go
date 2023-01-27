@@ -20,7 +20,7 @@ const workerNodeExp = `work-[-]?\d[\d,]*[\.]?[\d{2}]*`
 
 // AllocateNode - allocate which node is the best choice to have interaction with (e.g. cloning, creating)
 // GET /api2/json/cluster/resources
-func AllocateNode(cookies model.Cookies) (string, error) {
+func AllocateNode(cookies model.Cookies) ([]model.Resources, string, error) {
 	// Getting all nodes in cluster
 	log.Println("Getting cluster's resources ...")
 
@@ -52,7 +52,7 @@ func AllocateNode(cookies model.Cookies) (string, error) {
 	// If not 200 OK then log error
 	if resp.StatusCode != 200 {
 		log.Println("error: with status", resp.Status)
-		return "", errors.New(resp.Status)
+		return []model.Resources{}, "", errors.New(resp.Status)
 	}
 
 	// Parsing response
@@ -95,5 +95,5 @@ func AllocateNode(cookies model.Cookies) (string, error) {
 
 	// return the best node's name
 	log.Printf("Return selected node : %s", selectedNode.Node)
-	return selectedNode.Node, nil
+	return nodeList, selectedNode.Node, nil
 }
