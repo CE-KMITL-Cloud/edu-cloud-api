@@ -49,9 +49,9 @@ func AllocateNode(cookies model.Cookies) ([]model.Resources, string, error) {
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return []model.Resources{}, "", errors.New(resp.Status)
 	}
 

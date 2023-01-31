@@ -2,7 +2,9 @@
 package handler
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -31,7 +33,8 @@ func GetTicket(c *fiber.Ctx) error {
 	// Getting request's body
 	userLogin := new(model.Login)
 	if err := c.BodyParser(userLogin); err != nil {
-		return err
+		log.Println("Error: Could not parse body parser to getting ticket's body")
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to getting ticket's body"})
 	}
 
 	// Mapping values
@@ -40,10 +43,11 @@ func GetTicket(c *fiber.Ctx) error {
 	data.Set("password", userLogin.Password)
 
 	// Getting Ticket
-	ticket, err := internal.GetTicket(urlStr, data)
-	if err != nil {
-		log.Println("Error: Could not get ticket :", err)
-		return err
+	log.Printf("Getting ticket from user : %s", userLogin.Username)
+	ticket, ticketErr := internal.GetTicket(urlStr, data)
+	if ticketErr != nil {
+		log.Println("Error: Could not get ticket :", ticketErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting ticket from user : %s due to %s", userLogin.Username, ticketErr)})
 	}
 
 	// Set Cookie
@@ -61,5 +65,5 @@ func GetTicket(c *fiber.Ctx) error {
 	})
 
 	log.Printf("Finished getting ticket by user : %s", userLogin.Username)
-	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Got Ticket"})
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Getting ticket from user %s successfully", userLogin.Username)})
 }

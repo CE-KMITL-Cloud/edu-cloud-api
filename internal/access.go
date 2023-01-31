@@ -32,9 +32,9 @@ func GetTicket(url string, data url.Values) (model.Ticket, error) {
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
+	// If not http.StatusOK then log error
 	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+		log.Println("Error: with status", resp.Status)
 	}
 
 	// Read byte from body

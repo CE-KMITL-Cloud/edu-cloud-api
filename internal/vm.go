@@ -41,9 +41,9 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return info, errors.New(resp.Status)
 	}
 
@@ -89,9 +89,9 @@ func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return info, errors.New(resp.Status)
 	}
 
@@ -132,9 +132,9 @@ func CreateVM(url string, data url.Values, cookies model.Cookies) (model.VMRespo
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return response, errors.New(resp.Status)
 	}
 
@@ -179,9 +179,9 @@ func DeleteVM(url string, cookies model.Cookies) (model.VMResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return response, errors.New(resp.Status)
 	}
 
@@ -222,9 +222,9 @@ func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMRespon
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return response, errors.New(resp.Status)
 	}
 
@@ -264,9 +264,9 @@ func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error)
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return response, errors.New(resp.Status)
 	}
 
@@ -287,13 +287,13 @@ func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error)
 /*
 	action : { start, stop, suspend, shutdown, resume, reboot, reset }
 */
-func PowerManagement(url string, cookies model.Cookies) (model.VMResponse, error) {
+func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
 	// Return objects
 	response := model.VMResponse{}
 
 	// Construct new request
 	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return response, err
 	}
@@ -309,9 +309,9 @@ func PowerManagement(url string, cookies model.Cookies) (model.VMResponse, error
 	}
 	defer resp.Body.Close()
 
-	// If not 200 OK then log error
-	if resp.StatusCode != 200 {
-		log.Println("error: with status", resp.Status)
+	// If not http.StatusOK then log error
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
 		return response, errors.New(resp.Status)
 	}
 

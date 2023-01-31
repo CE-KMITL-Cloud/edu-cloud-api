@@ -28,9 +28,8 @@ func SetupRoutes(app *fiber.App) {
 	status := vm.Group("/status")
 	status.Post("/start", handler.StartVM)
 	status.Post("/stop", handler.StopVM)
-	// status.Post("/shutdown")
-	// status.Post("/suspend")
-	// status.Post("/resume")
-	// status.Post("/reboot")
-	// status.Post("/reset")
+	status.Post("/shutdown", handler.ShutdownVM)
+	status.Post("/suspend", handler.SuspendVM)
+	status.Post("/resume", handler.ResumeVM)
+	status.Post("/reset", handler.ResetVM)
 }

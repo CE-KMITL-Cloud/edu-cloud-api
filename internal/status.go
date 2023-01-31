@@ -15,11 +15,11 @@ import (
 )
 
 // StatusVM - for checking status of any process from specific VM
-func StatusVM(node, vmid string, statuses []string, cookies model.Cookies) bool {
+func StatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
 	log.Println("Checking status ...")
 
 	// Timeout - Default set to 30 mins
-	timeoutCh := time.After(30 * time.Minute)
+	timeoutCh := time.After(timeout)
 
 	// Get host's URL
 	hostURL := config.GetFromENV("PROXMOX_HOST")
@@ -52,8 +52,8 @@ func StatusVM(node, vmid string, statuses []string, cookies model.Cookies) bool 
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != 500 && resp.StatusCode != 200 {
-				log.Println("error: with status", resp.Status)
+			if resp.StatusCode != http.StatusInternalServerError && resp.StatusCode != http.StatusOK {
+				log.Println("Error: with status", resp.Status)
 			}
 
 			// Parsing response
@@ -72,21 +72,108 @@ func StatusVM(node, vmid string, statuses []string, cookies model.Cookies) bool 
 			// logging status of target VM
 			log.Printf("Status of %s in %s : %s", vmid, node, vm.Info.Status)
 
-			if resp.StatusCode == 500 {
-				log.Println("error: with status", resp.Status, "or could not found VM")
+			if resp.StatusCode == http.StatusInternalServerError {
+				log.Println("Error: with status", resp.Status, "or could not found VM")
+			}
+
+			// Check lock field in response. If lock field is null => unlocked
+			if lock {
+				if vm.Info.Lock == "" && config.Contains(statuses, vm.Info.Status) {
+					log.Printf("VMID : %s from %s has been unlocked, break with status : %s", vmid, node, vm.Info.Status)
+					return true
+				}
 			}
 
 			// incase status is in successful status list
 			if config.Contains(statuses, vm.Info.Status) {
 				log.Printf("Break status : %s", vm.Info.Status)
 				return true
-			} else if vm.Info.Lock == "" {
-				log.Printf("VMID : %s from %s has been unlocked", vmid, node) // if lock field is null => unlocked
+			}
+
+			// Default setting : check every 5 sec
+			time.Sleep(sleepTime)
+		}
+	}
+}
+
+// QMPStatusVM - for checking QMP Status of any process from specific VM
+func QMPStatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
+	log.Println("Checking QMP Status ...")
+
+	// Timeout - Default set to 30 mins
+	timeoutCh := time.After(timeout)
+
+	// Get host's URL
+	hostURL := config.GetFromENV("PROXMOX_HOST")
+
+	// Construct URL
+	u, _ := url.ParseRequestURI(hostURL)
+	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid)
+	urlStr := u.String()
+
+	for {
+		select {
+		case <-timeoutCh:
+			log.Println("Timeout reached, Task not finished")
+			return false
+		default:
+			// check status of the vm
+			client := &http.Client{}
+			req, err := http.NewRequest(http.MethodGet, urlStr, nil)
+			if err != nil {
+				log.Println(err)
+			}
+
+			// Getting cookie
+			req.AddCookie(&cookies.Cookie)
+			req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Println(err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusInternalServerError && resp.StatusCode != http.StatusOK {
+				log.Println("Error: with status", resp.Status)
+			}
+
+			// Parsing response
+			vm := model.VM{}
+			body, readErr := ioutil.ReadAll(resp.Body)
+			if readErr != nil {
+				log.Println(readErr)
+			}
+			// log.Println(string(body))
+
+			// Unmarshal body to struct
+			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
+				log.Println(marshalErr)
+			}
+
+			// logging status of target VM
+			log.Printf("Status of %s in %s : %s", vmid, node, vm.Info.QmpStatus)
+
+			if resp.StatusCode == http.StatusInternalServerError {
+				log.Println("Error: with status", resp.Status, "or could not found VM")
+			}
+
+			// Check lock field in response. If lock field is null => unlocked
+			if lock {
+				if vm.Info.Lock == "" && config.Contains(statuses, vm.Info.QmpStatus) {
+					log.Printf("VMID : %s from %s has been unlocked, break with QMP Status : %s", vmid, node, vm.Info.QmpStatus)
+					return true
+				}
+			}
+
+			// incase status is in successful QMP Status list
+			if config.Contains(statuses, vm.Info.QmpStatus) {
+				log.Printf("Break QMP Status : %s", vm.Info.QmpStatus)
 				return true
 			}
 
 			// Default setting : check every 5 sec
-			time.Sleep(5 * time.Second)
+			time.Sleep(sleepTime)
 		}
 	}
 }
@@ -129,14 +216,14 @@ func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 			}
 			defer resp.Body.Close()
 
-			// If not 200 OK then log error
-			if resp.StatusCode != 200 {
+			// If not http.StatusOK then log error
+			if resp.StatusCode != http.StatusOK {
 				// TODO : Another work around on this?
-				if resp.StatusCode == 500 {
+				if resp.StatusCode == http.StatusInternalServerError {
 					log.Printf("VMID : %s from %s is missing, Assume that VM has been deleted", vmid, node)
 					return true
 				}
-				log.Println("error: with status", resp.Status)
+				log.Println("Error: with status", resp.Status)
 			}
 
 			// Parsing response
@@ -145,7 +232,7 @@ func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 			if readErr != nil {
 				log.Println(readErr)
 			}
-			log.Println(string(body))
+			// log.Println(string(body))
 
 			// Unmarshal body to struct
 			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
@@ -205,14 +292,14 @@ func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cook
 			}
 			defer resp.Body.Close()
 
-			// If not 200 OK then log error
-			if resp.StatusCode != 200 {
+			// If not http.StatusOK then log error
+			if resp.StatusCode != http.StatusOK {
 				// TODO : Another work around on this?
-				if resp.StatusCode == 500 {
+				if resp.StatusCode == http.StatusInternalServerError {
 					log.Printf("Error when templating VMID : %s from %s, Assume that VM has been templated", vmid, node)
 					return true
 				}
-				log.Println("error: with status", resp.Status)
+				log.Println("Error: with status", resp.Status)
 			}
 
 			// Parsing response
@@ -268,7 +355,7 @@ func IsTemplate(node, vmid string, cookies model.Cookies) bool {
 		log.Println("Timeout reached, Task not finished")
 		return false
 	default:
-		// Check status of the vm
+		// Check status of the VM
 		client := &http.Client{}
 		req, err := http.NewRequest(http.MethodGet, urlStr, nil)
 		if err != nil {
@@ -285,9 +372,9 @@ func IsTemplate(node, vmid string, cookies model.Cookies) bool {
 		}
 		defer resp.Body.Close()
 
-		// If not 200 OK then log error
-		if resp.StatusCode != 200 {
-			log.Println("error: with status", resp.Status)
+		// If not http.StatusOK then log error
+		if resp.StatusCode != http.StatusOK {
+			log.Println("Error: with status", resp.Status)
 			return false
 		}
 
