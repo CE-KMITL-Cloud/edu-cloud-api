@@ -32,16 +32,7 @@ func GetVM(c *fiber.Ctx) error {
 	vmid := c.Query("vmid")
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -75,16 +66,7 @@ func GetVMList(c *fiber.Ctx) error {
 	node := c.Query("node")
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -145,16 +127,7 @@ func CreateVM(c *fiber.Ctx) error {
 	data.Set("scsihw", createBody.SCSIHW)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Getting target node from node allocation
 	workerNodes, target, nodeErr := internal.AllocateNode(cookies)
@@ -234,16 +207,7 @@ func DeleteVM(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(deleteBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -313,16 +277,7 @@ func CloneVM(c *fiber.Ctx) error {
 	vmid := c.Query("vmid")
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Check VM Template from vmid
 	isTemplate := internal.IsTemplate(node, vmid, cookies)
@@ -350,7 +305,7 @@ func CloneVM(c *fiber.Ctx) error {
 			for _, v := range vmList.Info {
 				list = append(list, fmt.Sprintf("%d", v.VMID))
 			}
-			log.Printf("VMs in node : %s : %s", workerNode.Node, list)
+			// log.Printf("VMs in node : %s : %s", workerNode.Node, list)
 
 			if config.Contains(list, string(newid)) {
 				log.Printf("Error: found duplicate VMID : %s in node : %s", newid, workerNode.Node)
@@ -412,16 +367,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(templateBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)

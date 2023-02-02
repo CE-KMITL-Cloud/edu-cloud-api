@@ -44,7 +44,7 @@ func StatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTim
 
 			// Getting cookie
 			req.AddCookie(&cookies.Cookie)
-			req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+			req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -62,7 +62,7 @@ func StatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTim
 			if readErr != nil {
 				log.Println(readErr)
 			}
-			// log.Println(string(body))
+			log.Println(string(body))
 
 			// Unmarshal body to struct
 			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
@@ -78,8 +78,9 @@ func StatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTim
 
 			// Check lock field in response. If lock field is null => unlocked
 			if lock {
-				if vm.Info.Lock == "" && config.Contains(statuses, vm.Info.Status) {
-					log.Printf("VMID : %s from %s has been unlocked, break with status : %s", vmid, node, vm.Info.Status)
+				log.Println("Enter checking lock")
+				if vm.Info.Lock == "" || config.Contains(statuses, vm.Info.Status) {
+					log.Printf("VMID : %s from %s has been unlocked or break with finished status", vmid, node)
 					return true
 				}
 			}
@@ -126,7 +127,7 @@ func QMPStatusVM(node, vmid string, statuses []string, lock bool, timeout, sleep
 
 			// Getting cookie
 			req.AddCookie(&cookies.Cookie)
-			req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+			req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -208,7 +209,7 @@ func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 
 			// Getting cookie
 			req.AddCookie(&cookies.Cookie)
-			req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+			req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 			resp, sendErr := client.Do(req)
 			if sendErr != nil {
@@ -284,7 +285,7 @@ func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cook
 
 			// Getting cookie
 			req.AddCookie(&cookies.Cookie)
-			req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+			req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 			resp, sendErr := client.Do(req)
 			if sendErr != nil {
@@ -364,7 +365,7 @@ func IsTemplate(node, vmid string, cookies model.Cookies) bool {
 
 		// Getting cookie
 		req.AddCookie(&cookies.Cookie)
-		req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+		req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 		resp, sendErr := client.Do(req)
 		if sendErr != nil {

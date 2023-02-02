@@ -3,8 +3,17 @@ package config
 
 import (
 	"log"
+	"net/http"
 
+	"github.com/edu-cloud-api/model"
+	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
+)
+
+const (
+	AUTH_COOKIE = "PVEAuthCookie"
+	CSRF_TOKEN  = "CSRFPreventionToken"
+	URL_ENCODED = "application/x-www-form-urlencoded"
 )
 
 // GetFromENV - get item from .env
@@ -37,6 +46,21 @@ func GetListFromENV(item []string) []string {
 		list = append(list, value)
 	}
 	return list
+}
+
+// GetCookies - Getting PVE cookie & CSRF Prevention Token
+func GetCookies(c *fiber.Ctx) model.Cookies {
+	cookies := model.Cookies{
+		Cookie: http.Cookie{
+			Name:  AUTH_COOKIE,
+			Value: c.Cookies(AUTH_COOKIE),
+		},
+		CSRFPreventionToken: fiber.Cookie{
+			Name:  CSRF_TOKEN,
+			Value: c.Cookies(CSRF_TOKEN),
+		},
+	}
+	return cookies
 }
 
 // Contains - check string in list

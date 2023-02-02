@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/model"
 )
 
@@ -23,7 +24,7 @@ func GetTicket(url string, data url.Values) (model.Ticket, error) {
 	if err != nil {
 		log.Println(err)
 	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Type", config.URL_ENCODED)
 
 	// POST request
 	resp, err := client.Do(req)

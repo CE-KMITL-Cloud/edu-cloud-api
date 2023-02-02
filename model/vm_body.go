@@ -47,9 +47,8 @@ type StopBody struct {
 
 // ShutdownBody - struct for request Shutting down VM
 type ShutdownBody struct {
-	VMID      uint32 `form:"vmid"`
-	Node      string `form:"node"`
-	ForceStop string `form:"forceStop"` // ! Fixed to set "1" for waiting until VM stopped
+	VMID uint32 `form:"vmid"`
+	Node string `form:"node"`
 }
 
 // SuspendBody - struct for request Suspending VM
@@ -66,6 +65,12 @@ type ResumeBody struct {
 
 // ResetBody - struct for request Resetting VM
 type ResetBody struct {
+	VMID uint32 `form:"vmid"`
+	Node string `form:"node"`
+}
+
+// RebootBody - struct for request Rebooting VM
+type RebootBody struct {
 	VMID uint32 `form:"vmid"`
 	Node string `form:"node"`
 }

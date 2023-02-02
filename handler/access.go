@@ -52,14 +52,14 @@ func GetTicket(c *fiber.Ctx) error {
 
 	// Set Cookie
 	c.Cookie(&fiber.Cookie{
-		Name:    "PVEAuthCookie",
+		Name:    config.AUTH_COOKIE,
 		Value:   ticket.Token.Cookie,
 		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
 	})
 
 	// Set CSRF Prevention Token
 	c.Cookie(&fiber.Cookie{
-		Name:    "CSRFPreventionToken",
+		Name:    config.CSRF_TOKEN,
 		Value:   ticket.Token.CSRFPreventionToken,
 		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
 	})

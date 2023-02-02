@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/model"
 )
 
@@ -32,7 +33,7 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	// GET request
 	resp, sendErr := client.Do(req)
@@ -80,7 +81,7 @@ func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	// GET request
 	resp, sendErr := client.Do(req)
@@ -122,8 +123,8 @@ func CreateVM(url string, data url.Values, cookies model.Cookies) (model.VMRespo
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
+	req.Header.Add("Content-Type", config.URL_ENCODED)
 
 	// POST request
 	resp, sendErr := client.Do(req)
@@ -170,7 +171,7 @@ func DeleteVM(url string, cookies model.Cookies) (model.VMResponse, error) {
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	// DELETE request
 	resp, sendErr := client.Do(req)
@@ -212,8 +213,8 @@ func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMRespon
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
+	req.Header.Add("Content-Type", config.URL_ENCODED)
 
 	// POST request
 	resp, sendErr := client.Do(req)
@@ -255,7 +256,7 @@ func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error)
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	// POST request
 	resp, sendErr := client.Do(req)
@@ -300,7 +301,7 @@ func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	// POST request
 	resp, sendErr := client.Do(req)

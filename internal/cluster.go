@@ -41,7 +41,7 @@ func AllocateNode(cookies model.Cookies) ([]model.Resources, string, error) {
 
 	// Getting cookie
 	req.AddCookie(&cookies.Cookie)
-	req.Header.Add("CSRFPreventionToken", cookies.CSRFPreventionToken.Value)
+	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	resp, err := client.Do(req)
 	if err != nil {

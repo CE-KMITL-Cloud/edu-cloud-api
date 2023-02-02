@@ -34,16 +34,7 @@ func StartVM(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(startBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -104,16 +95,7 @@ func StopVM(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(stopBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -179,16 +161,7 @@ func ShutdownVM(c *fiber.Ctx) error {
 	data.Set("forceStop", "1") // ! Fixed to set "1" for waiting until VM stopped
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -249,16 +222,7 @@ func SuspendVM(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(suspendBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -319,16 +283,7 @@ func ResumeVM(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(resumeBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -390,16 +345,7 @@ func ResetVM(c *fiber.Ctx) error {
 	vmid := fmt.Sprint(resetBody.VMID)
 
 	// Getting Cookie, CSRF Token
-	cookies := model.Cookies{
-		Cookie: http.Cookie{
-			Name:  "PVEAuthCookie",
-			Value: c.Cookies("PVEAuthCookie"),
-		},
-		CSRFPreventionToken: fiber.Cookie{
-			Name:  "CSRFPreventionToken",
-			Value: c.Cookies("CSRFPreventionToken"),
-		},
-	}
+	cookies := config.GetCookies(c)
 
 	// Construct Getting info URL
 	u, _ := url.ParseRequestURI(hostURL)
@@ -438,4 +384,69 @@ func ResetVM(c *fiber.Ctx) error {
 	}
 	log.Printf("Error: Could not reset VMID : %s in %s", vmid, resetBody.Node)
 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been reset correctly", vmid, resetBody.Node)})
+}
+
+// RebootVM - Reboot the VM by shutting it down, and starting it again. Applies pending changes.
+// POST /api2/json/nodes/{node}/qemu/{vmid}/status/reboot
+/*
+	using Request's Body
+	@node : node's name
+	@vmid : VM's ID
+*/
+func RebootVM(c *fiber.Ctx) error {
+	// Get host's URL
+	hostURL := config.GetFromENV("PROXMOX_HOST")
+
+	// Getting request's body
+	rebootBody := new(model.RebootBody)
+	if err := c.BodyParser(rebootBody); err != nil {
+		log.Println("Error: Could not parse body parser to reboot VM's body")
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to reboot VM's body"})
+	}
+	vmid := fmt.Sprint(rebootBody.VMID)
+
+	// Construct payload
+	data := url.Values{}
+	data.Set("timeout", "180") // ! Fixed to set 180 seconds for waiting for shutdown process
+
+	// Getting Cookie, CSRF Token
+	cookies := config.GetCookies(c)
+
+	// Construct Getting info URL
+	u, _ := url.ParseRequestURI(hostURL)
+	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", rebootBody.Node, vmid)
+	urlStr := u.String()
+
+	vm, err := internal.GetVM(urlStr, cookies)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, rebootBody.Node, err)})
+	}
+
+	// If target VM's status is not "running" then return
+	if vm.Info.Status != "running" {
+		log.Printf("Error: Could not reboot VMID : %s in %s due to VM hasn't been running", vmid, rebootBody.Node)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been running", vmid, rebootBody.Node)})
+	}
+
+	// Construct URL
+	rebootURL, _ := url.ParseRequestURI(hostURL)
+	rebootURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/reboot", rebootBody.Node, vmid)
+	rebootURLStr := rebootURL.String()
+
+	// Rebooting VM
+	log.Printf("Rebooting VMID : %s in %s", vmid, rebootBody.Node)
+	_, rebootErr := internal.PowerManagement(rebootURLStr, data, cookies)
+	if rebootErr != nil {
+		log.Printf("Error: Could not reboot VMID : %s in %s : %s", vmid, rebootBody.Node, rebootErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed rebooting VMID : %s in %s due to %s", vmid, rebootBody.Node, rebootErr)})
+	}
+
+	// Waiting until rebooting process has been completed
+	shutdown := internal.StatusVM(rebootBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), (3 * time.Second), cookies)
+	if shutdown {
+		log.Printf("Finished rebooting VMID : %s in %s", vmid, rebootBody.Node)
+		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been shut down", vmid, rebootBody.Node)})
+	}
+	log.Printf("Error: Could not reboot VMID : %s in %s", vmid, rebootBody.Node)
+	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been reboot correctly", vmid, rebootBody.Node)})
 }
