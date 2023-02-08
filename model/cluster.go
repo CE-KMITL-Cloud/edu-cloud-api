@@ -20,3 +20,10 @@ type Resources struct {
 	Mem     uint64  `json:"mem"`
 	UpTime  uint64  `json:"uptime"`
 }
+
+// VMSpec - struct of VM's specification
+type VMSpec struct {
+	Memory uint64
+	CPU    float64
+	Disk   uint64
+}

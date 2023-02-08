@@ -1,5 +1,5 @@
-// Package internal - internal functions
-package internal
+// Package qemu - QEMU functions
+package qemu
 
 import (
 	"encoding/json"

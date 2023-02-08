@@ -13,14 +13,14 @@ type VMInfo struct {
 	DiskWrite      uint64  `json:"diskwrite"`
 	UpTime         uint64  `json:"uptime"`
 	MaxMem         uint64  `json:"maxmem"`
-	PID            uint32  `json:"pid"`
+	PID            uint64  `json:"pid"`
 	Name           string  `json:"name"`
-	VMID           uint16  `json:"vmid"`
+	VMID           uint64  `json:"vmid"`
 	MaxDisk        uint64  `json:"maxdisk"`
 	Status         string  `json:"status"`
-	Disk           uint16  `json:"disk"`
+	Disk           uint64  `json:"disk"`
 	DiskRead       uint64  `json:"diskread"`
-	CPUs           uint16  `json:"cpus"`
+	CPUs           float64 `json:"cpus"`
 	Mem            uint64  `json:"mem"`
 	NetIn          uint64  `json:"netin"`
 	Lock           string  `json:"lock"`
@@ -49,14 +49,14 @@ type VMListInfo struct {
 	DiskWrite uint64  `json:"diskwrite"`
 	UpTime    uint64  `json:"uptime"`
 	MaxMem    uint64  `json:"maxmem"`
-	PID       uint32  `json:"pid"`
+	PID       uint64  `json:"pid"`
 	Name      string  `json:"name"`
-	VMID      uint16  `json:"vmid"`
+	VMID      uint64  `json:"vmid"`
 	MaxDisk   uint64  `json:"maxdisk"`
 	Status    string  `json:"status"`
-	Disk      uint16  `json:"disk"`
+	Disk      uint64  `json:"disk"`
 	DiskRead  uint64  `json:"diskread"`
-	CPUs      uint16  `json:"cpus"`
+	CPUs      float64 `json:"cpus"`
 	Mem       uint64  `json:"mem"`
 	NetIn     uint64  `json:"netin"`
 }
@@ -80,12 +80,12 @@ type VMTemplateInfo struct {
 	UpTime    uint64  `json:"uptime"`
 	MaxMem    uint64  `json:"maxmem"`
 	Name      string  `json:"name"`
-	VMID      uint16  `json:"vmid"`
+	VMID      uint64  `json:"vmid"`
 	MaxDisk   uint64  `json:"maxdisk"`
 	Status    string  `json:"status"`
-	Disk      uint16  `json:"disk"`
+	Disk      uint64  `json:"disk"`
 	DiskRead  uint64  `json:"diskread"`
-	CPUs      uint16  `json:"cpus"`
+	CPUs      float64 `json:"cpus"`
 	Mem       uint64  `json:"mem"`
 	NetIn     uint64  `json:"netin"`
 	QmpStatus string  `json:"qmpstatus"`

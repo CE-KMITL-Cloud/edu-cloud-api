@@ -1,5 +1,5 @@
-// Package internal - internal functions
-package internal
+// Package access - Access functions
+package access
 
 import (
 	"encoding/json"

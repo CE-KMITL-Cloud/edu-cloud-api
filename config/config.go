@@ -14,7 +14,21 @@ const (
 	AUTH_COOKIE = "PVEAuthCookie"
 	CSRF_TOKEN  = "CSRFPreventionToken"
 	URL_ENCODED = "application/x-www-form-urlencoded"
+	Gigabyte    = 1073741824 // Gigabyte : 1024^3
+	Megabyte    = 1048576    // Megabyte : 1024^2
+	MatchNumber = `:(\d+)`
+	WorkerNode  = `work-[-]?\d[\d,]*[\.]?[\d{2}]*`
 )
+
+// GBtoByte - Converter from GB to Byte
+func GBtoByte(input uint64) uint64 {
+	return input * Gigabyte
+}
+
+// MBtoByte - Converter from MB to Byte
+func MBtoByte(input uint64) uint64 {
+	return input * Megabyte
+}
 
 // GetFromENV - get item from .env
 func GetFromENV(item string) string {

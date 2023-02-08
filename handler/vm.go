@@ -6,10 +6,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/edu-cloud-api/config"
-	"github.com/edu-cloud-api/internal"
+	"github.com/edu-cloud-api/internal/cluster"
+	"github.com/edu-cloud-api/internal/qemu"
 	"github.com/edu-cloud-api/model"
 	"github.com/gofiber/fiber/v2"
 )
@@ -41,7 +44,7 @@ func GetVM(c *fiber.Ctx) error {
 
 	// Getting VM's info
 	log.Printf("Getting detail from VMID : %s in %s", vmid, node)
-	info, err := internal.GetVM(urlStr, cookies)
+	info, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		log.Println("Error: from getting VM's info :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, node, err)})
@@ -75,13 +78,13 @@ func GetVMList(c *fiber.Ctx) error {
 
 	// Getting VM's info
 	log.Printf("Getting VM list from %s", node)
-	info, err := internal.GetVMList(urlStr, cookies)
+	vmList, err := qemu.GetVMList(urlStr, cookies)
 	if err != nil {
 		log.Println("Error: from getting VM's list :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", node, err)})
 	}
 	log.Printf("Got VM list from node : %s", node)
-	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": info})
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": vmList})
 }
 
 // CreateVM - Create VM on specific node
@@ -112,25 +115,39 @@ func CreateVM(c *fiber.Ctx) error {
 	}
 	vmid := fmt.Sprint(createBody.VMID)
 
-	// TODO: Another work around here?
 	// Construct payload
 	data := url.Values{}
 	data.Set("vmid", vmid)
 	data.Set("name", createBody.Name)
-	data.Set("memory", fmt.Sprint(createBody.Memory))
-	data.Set("cores", fmt.Sprint(createBody.Cores))
+	data.Set("memory", fmt.Sprint(createBody.Memory)) // memory (MB)
+	data.Set("cores", fmt.Sprint(createBody.Cores))   // cpu (core)
 	data.Set("sockets", fmt.Sprint(createBody.Sockets))
 	data.Set("onboot", fmt.Sprint(createBody.Onboot))
-	data.Set("scsi0", createBody.SCSI0)
+	data.Set("scsi0", createBody.SCSI0) // "ceph-vm:32" have to use 32 (GB) as disk
 	data.Set("cdrom", createBody.CDROM)
 	data.Set("net0", createBody.Net0)
 	data.Set("scsihw", createBody.SCSIHW)
 
+	r := regexp.MustCompile(config.MatchNumber)
+	maxDiskStr := r.FindStringSubmatch(createBody.SCSI0)[1]
+	maxDisk, parseErr := strconv.ParseUint(maxDiskStr, 10, 64)
+	if parseErr != nil {
+		log.Println("Error: extract max disk :", parseErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to extract max disk field for creating VM due to %s", parseErr)})
+	}
+
 	// Getting Cookie, CSRF Token
 	cookies := config.GetCookies(c)
 
+	// Parse mem, cpu, disk for checking free space
+	vmSpec := model.VMSpec{
+		Memory: config.MBtoByte(createBody.Memory),
+		CPU:    createBody.Cores,
+		Disk:   config.GBtoByte(maxDisk),
+	}
+
 	// Getting target node from node allocation
-	workerNodes, target, nodeErr := internal.AllocateNode(cookies)
+	workerNodes, target, nodeErr := cluster.AllocateNode(vmSpec, cookies)
 	if nodeErr != nil {
 		log.Println("Error: allocate node :", nodeErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to allocate node for creating VM due to %s", nodeErr)})
@@ -144,7 +161,7 @@ func CreateVM(c *fiber.Ctx) error {
 		vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node) // all node
 		vmListURLStr := vmListURL.String()
 
-		vmList, vmListErr := internal.GetVMList(vmListURLStr, cookies)
+		vmList, vmListErr := qemu.GetVMList(vmListURLStr, cookies)
 		if vmListErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", workerNode.Node, vmListErr)})
 		}
@@ -169,7 +186,7 @@ func CreateVM(c *fiber.Ctx) error {
 
 	// Getting info
 	log.Printf("Creating VMID : %s in %s", vmid, target)
-	info, err := internal.CreateVM(urlStr, data, cookies)
+	info, err := qemu.CreateVM(urlStr, data, cookies)
 	if err != nil {
 		log.Println("Error: from creating VM :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed creating VMID : %s in %s due to %s", vmid, target, err)})
@@ -177,7 +194,7 @@ func CreateVM(c *fiber.Ctx) error {
 	log.Println(info)
 
 	// Waiting until creating process has been complete
-	created := internal.StatusVM(target, vmid, []string{"created", "starting", "running"}, true, (10 * time.Minute), time.Second, cookies)
+	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (10 * time.Minute), time.Second, cookies)
 	if created {
 		log.Printf("Finished creating VMID : %s in %s", vmid, target)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Creating new VMID: %s in %s successfully", vmid, target)})
@@ -215,7 +232,7 @@ func DeleteVM(c *fiber.Ctx) error {
 	urlStr := u.String()
 
 	// First check that target VM has been stopped
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, deleteBody.Node, err)})
 	}
@@ -233,14 +250,14 @@ func DeleteVM(c *fiber.Ctx) error {
 
 	// Deleting target VM
 	log.Printf("Deleting VMID : %s in %s", vmid, deleteBody.Node)
-	_, deleteErr := internal.DeleteVM(deleteURLStr, cookies)
+	_, deleteErr := qemu.DeleteVM(deleteURLStr, cookies)
 	if deleteErr != nil {
 		log.Printf("Error: deleting VMID : %s in %s due to %s", vmid, deleteBody.Node, deleteErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting VMID : %s in %s due to %s", vmid, deleteBody.Node, deleteErr)})
 	}
 
 	// Check that target VM has been deleted completely yet
-	deleted := internal.DeleteCompletely(deleteBody.Node, vmid, cookies)
+	deleted := qemu.DeleteCompletely(deleteBody.Node, vmid, cookies)
 	if deleted {
 		log.Printf("Finished deleting VMID : %s in %s", vmid, deleteBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been deleted", vmid, deleteBody.Node)})
@@ -280,10 +297,27 @@ func CloneVM(c *fiber.Ctx) error {
 	cookies := config.GetCookies(c)
 
 	// Check VM Template from vmid
-	isTemplate := internal.IsTemplate(node, vmid, cookies)
+	isTemplate := qemu.IsTemplate(node, vmid, cookies)
 	if isTemplate {
+		// Check spec of the VM before allocate node
+		vmInfoURL, _ := url.ParseRequestURI(hostURL)
+		vmInfoURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid)
+		vmInfoURLStr := vmInfoURL.String()
+		vm, vmInfoErr := qemu.GetVM(vmInfoURLStr, cookies)
+		if vmInfoErr != nil {
+			log.Println(vm)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to get VM Template info for creating VM due to %s", vmInfoErr)})
+		}
+
+		// Parse mem, cpu, disk for checking free space
+		vmSpec := model.VMSpec{
+			Memory: vm.Info.MaxMem,
+			CPU:    vm.Info.CPUs,
+			Disk:   vm.Info.MaxDisk,
+		}
+
 		// Getting target node from node allocation
-		workerNodes, target, nodeErr := internal.AllocateNode(cookies)
+		workerNodes, target, nodeErr := cluster.AllocateNode(vmSpec, cookies)
 		if nodeErr != nil {
 			log.Println("Error: allocate node :", nodeErr)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to allocate node for creating VM due to %s", nodeErr)})
@@ -295,7 +329,7 @@ func CloneVM(c *fiber.Ctx) error {
 			vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node) // all node
 			vmListURLStr := vmListURL.String()
 
-			vmList, vmListErr := internal.GetVMList(vmListURLStr, cookies)
+			vmList, vmListErr := qemu.GetVMList(vmListURLStr, cookies)
 			if vmListErr != nil {
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", workerNode.Node, vmListErr)})
 			}
@@ -327,7 +361,7 @@ func CloneVM(c *fiber.Ctx) error {
 
 		// Getting info
 		log.Printf("Cloning VMID : %s in %s", newid, target)
-		info, cloneErr := internal.CloneVM(urlStr, data, cookies)
+		info, cloneErr := qemu.CloneVM(urlStr, data, cookies)
 		if cloneErr != nil {
 			log.Printf("Error: cloning VMID : %s in %s : %s", newid, target, cloneErr)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed cloning VMID : %s in %s due to %s", vmid, target, cloneErr)})
@@ -335,7 +369,7 @@ func CloneVM(c *fiber.Ctx) error {
 		log.Println(info)
 
 		// Waiting until cloning process has been completed
-		cloned := internal.StatusVM(target, newid, []string{"created", "starting", "running"}, true, (10 * time.Minute), time.Second, cookies)
+		cloned := qemu.CheckStatus(target, newid, []string{"created", "starting", "running"}, true, (10 * time.Minute), time.Second, cookies)
 		if cloned {
 			log.Printf("Finished cloning VMID : %s in %s", newid, target)
 			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Cloning new VMID: %s to %s successfully", newid, target)})
@@ -375,7 +409,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 	urlStr := u.String()
 
 	// First check that target VM has been stopped
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, templateBody.Node, err)})
 	}
@@ -393,14 +427,14 @@ func CreateTemplate(c *fiber.Ctx) error {
 
 	// Templating VM
 	log.Printf("Creating template from VMID : %s in %s", vmid, templateBody.Node)
-	_, templateErr := internal.CreateTemplate(templateURLStr, cookies)
+	_, templateErr := qemu.CreateTemplate(templateURLStr, cookies)
 	if templateErr != nil {
 		log.Printf("Error: Could not template VMID : %s in %s : %s", vmid, templateBody.Node, templateErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed templating VMID : %s in %s due to %s", vmid, templateBody.Node, templateErr)})
 	}
 
 	// Waiting until templating process has been completed
-	templated := internal.TemplateCompletely(templateBody.Node, vmid, []string{"created", "existing"}, cookies)
+	templated := qemu.TemplateCompletely(templateBody.Node, vmid, []string{"created", "existing"}, cookies)
 	if templated {
 		log.Printf("Finished templating VMID : %s in %s", vmid, templateBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been templated", vmid, templateBody.Node)})

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/edu-cloud-api/config"
-	"github.com/edu-cloud-api/internal"
+	"github.com/edu-cloud-api/internal/qemu"
 	"github.com/edu-cloud-api/model"
 	"github.com/gofiber/fiber/v2"
 )
@@ -41,7 +41,7 @@ func StartVM(c *fiber.Ctx) error {
 	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", startBody.Node, vmid)
 	urlStr := u.String()
 
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, startBody.Node, err)})
 	}
@@ -59,14 +59,14 @@ func StartVM(c *fiber.Ctx) error {
 
 	// Starting VM
 	log.Printf("Starting VMID : %s in %s", vmid, startBody.Node)
-	_, startErr := internal.PowerManagement(startURLStr, nil, cookies)
+	_, startErr := qemu.PowerManagement(startURLStr, nil, cookies)
 	if startErr != nil {
 		log.Printf("Error: Could not start VMID : %s in %s : %s", vmid, startBody.Node, startErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed starting VMID : %s in %s due to %s", vmid, startBody.Node, startErr)})
 	}
 
 	// Waiting until starting process has been completed
-	started := internal.StatusVM(startBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
+	started := qemu.CheckStatus(startBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
 	if started {
 		log.Printf("Finished starting VMID : %s in %s", vmid, startBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been started", vmid, startBody.Node)})
@@ -102,7 +102,7 @@ func StopVM(c *fiber.Ctx) error {
 	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", stopBody.Node, vmid)
 	urlStr := u.String()
 
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, stopBody.Node, err)})
 	}
@@ -120,14 +120,14 @@ func StopVM(c *fiber.Ctx) error {
 
 	// Stopping VM
 	log.Printf("Stopping VMID : %s in %s", vmid, stopBody.Node)
-	_, stopErr := internal.PowerManagement(stopURLStr, nil, cookies)
+	_, stopErr := qemu.PowerManagement(stopURLStr, nil, cookies)
 	if stopErr != nil {
 		log.Printf("Error: Could not stop VMID : %s in %s : %s", vmid, stopBody.Node, stopErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed stopping VMID : %s in %s due to %s", vmid, stopBody.Node, stopErr)})
 	}
 
 	// Waiting until stopping process has been completed
-	stopped := internal.StatusVM(stopBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), time.Second, cookies)
+	stopped := qemu.CheckStatus(stopBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), time.Second, cookies)
 	if stopped {
 		log.Printf("Finished stopping VMID : %s in %s", vmid, stopBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been stopped", vmid, stopBody.Node)})
@@ -168,7 +168,7 @@ func ShutdownVM(c *fiber.Ctx) error {
 	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", shutdownBody.Node, vmid)
 	urlStr := u.String()
 
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, shutdownBody.Node, err)})
 	}
@@ -186,14 +186,14 @@ func ShutdownVM(c *fiber.Ctx) error {
 
 	// Shutting down VM
 	log.Printf("Shutting down VMID : %s in %s", vmid, shutdownBody.Node)
-	_, shutdownErr := internal.PowerManagement(shutdownURLStr, data, cookies)
+	_, shutdownErr := qemu.PowerManagement(shutdownURLStr, data, cookies)
 	if shutdownErr != nil {
 		log.Printf("Error: Could not shut down VMID : %s in %s : %s", vmid, shutdownBody.Node, shutdownErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed shutting down VMID : %s in %s due to %s", vmid, shutdownBody.Node, shutdownErr)})
 	}
 
 	// Waiting until shutting down process has been completed
-	shutdown := internal.StatusVM(shutdownBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), (3 * time.Second), cookies)
+	shutdown := qemu.CheckStatus(shutdownBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), (3 * time.Second), cookies)
 	if shutdown {
 		log.Printf("Finished shutting down VMID : %s in %s", vmid, shutdownBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been shut down", vmid, shutdownBody.Node)})
@@ -229,7 +229,7 @@ func SuspendVM(c *fiber.Ctx) error {
 	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", suspendBody.Node, vmid)
 	urlStr := u.String()
 
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, suspendBody.Node, err)})
 	}
@@ -247,14 +247,14 @@ func SuspendVM(c *fiber.Ctx) error {
 
 	// Suspending VM
 	log.Printf("Suspending VMID : %s in %s", vmid, suspendBody.Node)
-	_, suspendErr := internal.PowerManagement(suspendURLStr, nil, cookies)
+	_, suspendErr := qemu.PowerManagement(suspendURLStr, nil, cookies)
 	if suspendErr != nil {
 		log.Printf("Error: Could not suspend VMID : %s in %s : %s", vmid, suspendBody.Node, suspendErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed suspending VMID : %s in %s due to %s", vmid, suspendBody.Node, suspendErr)})
 	}
 
 	// Waiting until suspending process has been completed
-	suspended := internal.QMPStatusVM(suspendBody.Node, vmid, []string{"paused"}, false, (5 * time.Minute), time.Second, cookies)
+	suspended := qemu.CheckQmpStatus(suspendBody.Node, vmid, []string{"paused"}, false, (5 * time.Minute), time.Second, cookies)
 	if suspended {
 		log.Printf("Finished suspending VMID : %s in %s", vmid, suspendBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been suspended", vmid, suspendBody.Node)})
@@ -290,7 +290,7 @@ func ResumeVM(c *fiber.Ctx) error {
 	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", resumeBody.Node, vmid)
 	urlStr := u.String()
 
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, resumeBody.Node, err)})
 	}
@@ -308,14 +308,14 @@ func ResumeVM(c *fiber.Ctx) error {
 
 	// Resuming VM
 	log.Printf("Resuming VMID : %s in %s", vmid, resumeBody.Node)
-	_, resumeErr := internal.PowerManagement(resumeURLStr, nil, cookies)
+	_, resumeErr := qemu.PowerManagement(resumeURLStr, nil, cookies)
 	if resumeErr != nil {
 		log.Printf("Error: Could not resume VMID : %s in %s : %s", vmid, resumeBody.Node, resumeErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed resuming VMID : %s in %s due to %s", vmid, resumeBody.Node, resumeErr)})
 	}
 
 	// Waiting until resuming process has been completed
-	resumed := internal.QMPStatusVM(resumeBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
+	resumed := qemu.CheckQmpStatus(resumeBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
 	if resumed {
 		log.Printf("Finished resuming VMID : %s in %s", vmid, resumeBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been resumed", vmid, resumeBody.Node)})
@@ -352,7 +352,7 @@ func ResetVM(c *fiber.Ctx) error {
 	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", resetBody.Node, vmid)
 	urlStr := u.String()
 
-	vm, err := internal.GetVM(urlStr, cookies)
+	vm, err := qemu.GetVM(urlStr, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, resetBody.Node, err)})
 	}
@@ -370,83 +370,18 @@ func ResetVM(c *fiber.Ctx) error {
 
 	// Resetting VM
 	log.Printf("Resetting VMID : %s in %s", vmid, resetBody.Node)
-	_, resetErr := internal.PowerManagement(resetURLStr, nil, cookies)
+	_, resetErr := qemu.PowerManagement(resetURLStr, nil, cookies)
 	if resetErr != nil {
 		log.Printf("Error: Could not reset VMID : %s in %s : %s", vmid, resetBody.Node, resetErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed resetting VMID : %s in %s due to %s", vmid, resetBody.Node, resetErr)})
 	}
 
 	// Waiting until resetting process has been completed
-	reset := internal.StatusVM(resetBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
+	reset := qemu.CheckStatus(resetBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
 	if reset {
 		log.Printf("Finished resetting VMID : %s in %s", vmid, resetBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been reset", vmid, resetBody.Node)})
 	}
 	log.Printf("Error: Could not reset VMID : %s in %s", vmid, resetBody.Node)
 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been reset correctly", vmid, resetBody.Node)})
-}
-
-// RebootVM - Reboot the VM by shutting it down, and starting it again. Applies pending changes.
-// POST /api2/json/nodes/{node}/qemu/{vmid}/status/reboot
-/*
-	using Request's Body
-	@node : node's name
-	@vmid : VM's ID
-*/
-func RebootVM(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
-	// Getting request's body
-	rebootBody := new(model.RebootBody)
-	if err := c.BodyParser(rebootBody); err != nil {
-		log.Println("Error: Could not parse body parser to reboot VM's body")
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to reboot VM's body"})
-	}
-	vmid := fmt.Sprint(rebootBody.VMID)
-
-	// Construct payload
-	data := url.Values{}
-	data.Set("timeout", "180") // ! Fixed to set 180 seconds for waiting for shutdown process
-
-	// Getting Cookie, CSRF Token
-	cookies := config.GetCookies(c)
-
-	// Construct Getting info URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", rebootBody.Node, vmid)
-	urlStr := u.String()
-
-	vm, err := internal.GetVM(urlStr, cookies)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, rebootBody.Node, err)})
-	}
-
-	// If target VM's status is not "running" then return
-	if vm.Info.Status != "running" {
-		log.Printf("Error: Could not reboot VMID : %s in %s due to VM hasn't been running", vmid, rebootBody.Node)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been running", vmid, rebootBody.Node)})
-	}
-
-	// Construct URL
-	rebootURL, _ := url.ParseRequestURI(hostURL)
-	rebootURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/reboot", rebootBody.Node, vmid)
-	rebootURLStr := rebootURL.String()
-
-	// Rebooting VM
-	log.Printf("Rebooting VMID : %s in %s", vmid, rebootBody.Node)
-	_, rebootErr := internal.PowerManagement(rebootURLStr, data, cookies)
-	if rebootErr != nil {
-		log.Printf("Error: Could not reboot VMID : %s in %s : %s", vmid, rebootBody.Node, rebootErr)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed rebooting VMID : %s in %s due to %s", vmid, rebootBody.Node, rebootErr)})
-	}
-
-	// Waiting until rebooting process has been completed
-	shutdown := internal.StatusVM(rebootBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), (3 * time.Second), cookies)
-	if shutdown {
-		log.Printf("Finished rebooting VMID : %s in %s", vmid, rebootBody.Node)
-		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been shut down", vmid, rebootBody.Node)})
-	}
-	log.Printf("Error: Could not reboot VMID : %s in %s", vmid, rebootBody.Node)
-	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been reboot correctly", vmid, rebootBody.Node)})
 }

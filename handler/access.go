@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/edu-cloud-api/config"
-	"github.com/edu-cloud-api/internal"
+	"github.com/edu-cloud-api/internal/access"
 	"github.com/edu-cloud-api/model"
 	"github.com/gofiber/fiber/v2"
 )
@@ -44,7 +44,7 @@ func GetTicket(c *fiber.Ctx) error {
 
 	// Getting Ticket
 	log.Printf("Getting ticket from user : %s", userLogin.Username)
-	ticket, ticketErr := internal.GetTicket(urlStr, data)
+	ticket, ticketErr := access.GetTicket(urlStr, data)
 	if ticketErr != nil {
 		log.Println("Error: Could not get ticket :", ticketErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting ticket from user : %s due to %s", userLogin.Username, ticketErr)})

@@ -1,5 +1,5 @@
-// Package internal - internal functions
-package internal
+// Package cluster - Cluster functions
+package cluster
 
 import (
 	"encoding/json"
@@ -15,12 +15,10 @@ import (
 	"github.com/edu-cloud-api/model"
 )
 
-// use as regex to filter only worker node
-const workerNodeExp = `work-[-]?\d[\d,]*[\.]?[\d{2}]*`
-
 // AllocateNode - allocate which node is the best choice to have interaction with (e.g. cloning, creating)
 // GET /api2/json/cluster/resources
-func AllocateNode(cookies model.Cookies) ([]model.Resources, string, error) {
+// TODO : Parse memory, cpu, disk for checking that is there enough resource for create, clone or edit or not
+func AllocateNode(spec model.VMSpec, cookies model.Cookies) ([]model.Resources, string, error) {
 	// Getting all nodes in cluster
 	log.Println("Getting cluster's resources ...")
 
@@ -72,7 +70,7 @@ func AllocateNode(cookies model.Cookies) ([]model.Resources, string, error) {
 
 	// Regex and return only worker nodes
 	for i := 0; i < len(node.Resources); i++ {
-		r, _ := regexp.Compile(workerNodeExp) // match node which start with work-{number}
+		r, _ := regexp.Compile(config.WorkerNode) // match node which start with work-{number}
 		if node.Resources[i].Type == "node" && r.MatchString(node.Resources[i].Node) {
 			nodeList = append(nodeList, node.Resources[i])
 		}
@@ -81,19 +79,27 @@ func AllocateNode(cookies model.Cookies) ([]model.Resources, string, error) {
 
 	// Compare all of them which node is the best {mem, cpu}
 	var selectedNode model.Resources
-	var maxFreeMemoryPercent, maxFreeCPUPercent float64 = -math.MaxFloat64, -math.MaxFloat64
+	var maxFreeMemory, maxFreeMemoryPercent uint64
+	var maxFreeDisk uint64
+	var maxFreeCPU, maxFreeCPUPercent float64 = -math.MaxFloat64, -math.MaxFloat64
 	for _, node := range nodeList {
-		freeMemoryPercent := (float64(node.MaxMem-node.Mem) / float64(node.MaxMem)) * 100
-		freeCPUPercent := (float64(node.MaxCPU-node.CPU) / float64(node.MaxCPU)) * 100
-		log.Printf("node: %s, free mem: %f, free cpu: %f", node.Node, freeMemoryPercent, freeCPUPercent)
+		freeMemory, freeCPU, freeDisk := node.MaxMem-node.Mem, node.MaxCPU-node.CPU, node.MaxDisk-node.Disk
+		freeMemoryPercent := (freeMemory / node.MaxMem) * 100
+		freeCPUPercent := (freeCPU / node.MaxCPU) * 100
+		log.Printf("node: %s, free mem: %d, free cpu: %f, free disk: %d", node.Node, freeMemory, freeCPU, freeDisk)
 		if freeMemoryPercent > maxFreeMemoryPercent || (freeMemoryPercent == maxFreeMemoryPercent && freeCPUPercent > maxFreeCPUPercent) {
-			maxFreeMemoryPercent = freeMemoryPercent
-			maxFreeCPUPercent = freeCPUPercent
+			maxFreeMemoryPercent, maxFreeCPUPercent = freeMemoryPercent, freeCPUPercent
+			maxFreeMemory, maxFreeCPU, maxFreeDisk = freeMemory, freeCPU, freeDisk
 			selectedNode = node
 		}
 	}
 
-	// return the best node's name
-	log.Printf("Return selected node : %s", selectedNode.Node)
-	return nodeList, selectedNode.Node, nil
+	log.Printf("selected node: %s, free mem: %d, free cpu: %f, free disk: %d", selectedNode.Node, maxFreeMemory/config.Gigabyte, maxFreeCPU, maxFreeDisk/config.Gigabyte)
+	log.Printf("vm spec mem: %d, cpu: %f, disk: %d", spec.Memory/config.Gigabyte, spec.CPU, spec.Disk/config.Gigabyte)
+	if maxFreeMemory > spec.Memory && maxFreeCPU > spec.CPU && maxFreeDisk > spec.Disk {
+		log.Printf("Return selected node : %s", selectedNode.Node)
+		return nodeList, selectedNode.Node, nil
+	}
+	log.Printf("Selected node : %s have no enough free space", selectedNode.Node)
+	return nodeList, selectedNode.Node, errors.New("error: Node have no enough free space")
 }

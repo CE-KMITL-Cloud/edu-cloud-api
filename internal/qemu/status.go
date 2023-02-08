@@ -1,5 +1,5 @@
-// Package internal - internal functions
-package internal
+// Package qemu - QEMU functions
+package qemu
 
 import (
 	"encoding/json"
@@ -14,8 +14,8 @@ import (
 	"github.com/edu-cloud-api/model"
 )
 
-// StatusVM - for checking status of any process from specific VM
-func StatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
+// CheckStatus - for checking status of any process from specific VM
+func CheckStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
 	log.Println("Checking status ...")
 
 	// Timeout - Default set to 30 mins
@@ -97,8 +97,8 @@ func StatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTim
 	}
 }
 
-// QMPStatusVM - for checking QMP Status of any process from specific VM
-func QMPStatusVM(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
+// CheckQmpStatus - for checking QMP Status of any process from specific VM
+func CheckQmpStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
 	log.Println("Checking QMP Status ...")
 
 	// Timeout - Default set to 30 mins
