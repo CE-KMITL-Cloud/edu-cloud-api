@@ -3,12 +3,8 @@ package qemu
 
 import (
 	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/model"
@@ -21,41 +17,11 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	// database.DB.Db.Find(&user, "username = ?", username)
 	// log.Println(user)
 
-	// Return objects using string map due to returned object has many use-cases
 	info := model.VM{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
 	if err != nil {
 		return info, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-
-	// GET request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return info, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return info, errors.New(resp.Status)
-	}
-
-	// We Read the response body on the line below.
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return info, readErr
-	}
-	// log.Println(string(body))
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
 		return info, marshalErr
 	}
@@ -69,40 +35,11 @@ func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
 	// database.DB.Db.Find(&user, "username = ?", username)
 	// log.Println(user)
 
-	// Return objects
 	info := model.VMList{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
 	if err != nil {
 		return info, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-
-	// GET request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return info, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return info, errors.New(resp.Status)
-	}
-
-	// We Read the response body on the line below.
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return info, readErr
-	}
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
 		return info, marshalErr
 	}
@@ -111,41 +48,11 @@ func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
 
 // CreateVM - POST /api2/json/nodes/{node}/qemu
 func CreateVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
-	// Return objects
 	response := model.VMResponse{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data.Encode()))
+	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {
 		return response, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-	req.Header.Add("Content-Type", config.URL_ENCODED)
-
-	// POST request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return response, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return response, errors.New(resp.Status)
-	}
-
-	// Read byte from body
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return response, readErr
-	}
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
 		return response, marshalErr
 	}
@@ -159,40 +66,11 @@ func DeleteVM(url string, cookies model.Cookies) (model.VMResponse, error) {
 	// database.DB.Db.Find(&user, "username = ?", username)
 	// log.Println(user)
 
-	// Return objects
 	response := model.VMResponse{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	body, err := config.SendRequestWithErr(http.MethodDelete, url, nil, cookies)
 	if err != nil {
 		return response, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-
-	// DELETE request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return response, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return response, errors.New(resp.Status)
-	}
-
-	// Read byte from body
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return response, readErr
-	}
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
 		return response, marshalErr
 	}
@@ -201,41 +79,11 @@ func DeleteVM(url string, cookies model.Cookies) (model.VMResponse, error) {
 
 // CloneVM - POST /api2/json/nodes/{node}/qemu/{vmid}/clone
 func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
-	// Return objects
 	response := model.VMResponse{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data.Encode()))
+	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {
 		return response, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-	req.Header.Add("Content-Type", config.URL_ENCODED)
-
-	// POST request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return response, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return response, errors.New(resp.Status)
-	}
-
-	// Read byte from body
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return response, readErr
-	}
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
 		return response, marshalErr
 	}
@@ -244,40 +92,11 @@ func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMRespon
 
 // CreateTemplate - POST /api2/json/nodes/{node}/qemu/{vmid}/template
 func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error) {
-	// Return objects
 	response := model.VMResponse{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	body, err := config.SendRequestWithErr(http.MethodPost, url, nil, cookies)
 	if err != nil {
 		return response, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-
-	// POST request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return response, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return response, errors.New(resp.Status)
-	}
-
-	// Read byte from body
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return response, readErr
-	}
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
 		return response, marshalErr
 	}
@@ -289,40 +108,11 @@ func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error)
 	action : { start, stop, suspend, shutdown, resume, reboot, reset }
 */
 func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
-	// Return objects
 	response := model.VMResponse{}
-
-	// Construct new request
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(data.Encode()))
+	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {
 		return response, err
 	}
-
-	// Getting cookie
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(config.CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
-
-	// POST request
-	resp, sendErr := client.Do(req)
-	if sendErr != nil {
-		return response, sendErr
-	}
-	defer resp.Body.Close()
-
-	// If not http.StatusOK then log error
-	if resp.StatusCode != http.StatusOK {
-		log.Println("Error: with status", resp.Status)
-		return response, errors.New(resp.Status)
-	}
-
-	// Read byte from body
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return response, readErr
-	}
-
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
 		return response, marshalErr
 	}

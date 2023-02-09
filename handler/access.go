@@ -22,14 +22,6 @@ import (
 	@password : account's password
 */
 func GetTicket(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = "/api2/json/access/ticket"
-	urlStr := u.String()
-
 	// Getting request's body
 	userLogin := new(model.Login)
 	if err := c.BodyParser(userLogin); err != nil {
@@ -44,7 +36,8 @@ func GetTicket(c *fiber.Ctx) error {
 
 	// Getting Ticket
 	log.Printf("Getting ticket from user : %s", userLogin.Username)
-	ticket, ticketErr := access.GetTicket(urlStr, data)
+	getTicketURL := config.GetURL("/api2/json/access/ticket")
+	ticket, ticketErr := access.GetTicket(getTicketURL, data)
 	if ticketErr != nil {
 		log.Println("Error: Could not get ticket :", ticketErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting ticket from user : %s due to %s", userLogin.Username, ticketErr)})

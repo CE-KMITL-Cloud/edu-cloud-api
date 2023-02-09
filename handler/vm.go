@@ -26,25 +26,16 @@ import (
 	@vmid : VM's ID
 */
 func GetVM(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
-	// Getting request's query params
 	// ? username := c.Query("username")
 	node := c.Query("node")
 	vmid := c.Query("vmid")
 
-	// Getting Cookie, CSRF Token
 	cookies := config.GetCookies(c)
-
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid)
-	urlStr := u.String()
 
 	// Getting VM's info
 	log.Printf("Getting detail from VMID : %s in %s", vmid, node)
-	info, err := qemu.GetVM(urlStr, cookies)
+	url := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
+	info, err := qemu.GetVM(url, cookies)
 	if err != nil {
 		log.Println("Error: from getting VM's info :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, node, err)})
@@ -53,7 +44,7 @@ func GetVM(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": info})
 }
 
-// GetVMList - Getting specific VM's info
+// GetVMList - Getting VM list from given node
 // GET /api2/json/nodes/{node}/qemu
 /*
 	using Query Params
@@ -61,24 +52,15 @@ func GetVM(c *fiber.Ctx) error {
 	@node : node's name
 */
 func GetVMList(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
-	// Getting request's query params
 	// ? username := c.Query("username")
 	node := c.Query("node")
 
-	// Getting Cookie, CSRF Token
 	cookies := config.GetCookies(c)
 
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", node)
-	urlStr := u.String()
-
-	// Getting VM's info
+	// Getting VM list
+	url := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", node))
 	log.Printf("Getting VM list from %s", node)
-	vmList, err := qemu.GetVMList(urlStr, cookies)
+	vmList, err := qemu.GetVMList(url, cookies)
 	if err != nil {
 		log.Println("Error: from getting VM's list :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", node, err)})
@@ -104,10 +86,6 @@ func GetVMList(c *fiber.Ctx) error {
 */
 // TODO : Specific resource pool by add pool in request's body
 func CreateVM(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
-	// Getting request's body
 	createBody := new(model.CreateBody)
 	if err := c.BodyParser(createBody); err != nil {
 		log.Println("Error: Could not parse body parser to create VM's body")
@@ -136,15 +114,14 @@ func CreateVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to extract max disk field for creating VM due to %s", parseErr)})
 	}
 
-	// Getting Cookie, CSRF Token
-	cookies := config.GetCookies(c)
-
 	// Parse mem, cpu, disk for checking free space
 	vmSpec := model.VMSpec{
 		Memory: config.MBtoByte(createBody.Memory),
 		CPU:    createBody.Cores,
 		Disk:   config.GBtoByte(maxDisk),
 	}
+
+	cookies := config.GetCookies(c)
 
 	// Getting target node from node allocation
 	workerNodes, target, nodeErr := cluster.AllocateNode(vmSpec, cookies)
@@ -156,17 +133,11 @@ func CreateVM(c *fiber.Ctx) error {
 
 	// Check duplicate vmid
 	for _, workerNode := range workerNodes {
-		// Construct VM List URL
-		vmListURL, _ := url.ParseRequestURI(hostURL)
-		vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node) // all node
-		vmListURLStr := vmListURL.String()
-
-		vmList, vmListErr := qemu.GetVMList(vmListURLStr, cookies)
+		vmListURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node))
+		vmList, vmListErr := qemu.GetVMList(vmListURL, cookies)
 		if vmListErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", workerNode.Node, vmListErr)})
 		}
-
-		// Checking duplicate VM by VMID
 		var list []string
 		for _, v := range vmList.Info {
 			list = append(list, fmt.Sprintf("%d", v.VMID))
@@ -179,14 +150,10 @@ func CreateVM(c *fiber.Ctx) error {
 		}
 	}
 
-	// Construct URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", target)
-	urlStr := u.String()
-
-	// Getting info
+	// Creating VM
+	vmCreateURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", target))
 	log.Printf("Creating VMID : %s in %s", vmid, target)
-	info, err := qemu.CreateVM(urlStr, data, cookies)
+	info, err := qemu.CreateVM(vmCreateURL, data, cookies)
 	if err != nil {
 		log.Println("Error: from creating VM :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed creating VMID : %s in %s due to %s", vmid, target, err)})
@@ -212,9 +179,6 @@ func CreateVM(c *fiber.Ctx) error {
 	@vmid : VM's ID
 */
 func DeleteVM(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
 	// Getting request's body
 	deleteBody := new(model.DeleteBody)
 	if err := c.BodyParser(deleteBody); err != nil {
@@ -223,16 +187,11 @@ func DeleteVM(c *fiber.Ctx) error {
 	}
 	vmid := fmt.Sprint(deleteBody.VMID)
 
-	// Getting Cookie, CSRF Token
 	cookies := config.GetCookies(c)
 
-	// Construct Getting info URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", deleteBody.Node, vmid)
-	urlStr := u.String()
-
 	// First check that target VM has been stopped
-	vm, err := qemu.GetVM(urlStr, cookies)
+	vmGetURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", deleteBody.Node, vmid))
+	vm, err := qemu.GetVM(vmGetURL, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, deleteBody.Node, err)})
 	}
@@ -243,14 +202,10 @@ func DeleteVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, deleteBody.Node)})
 	}
 
-	// Construct Deleting API URL
-	deleteURL, _ := url.ParseRequestURI(hostURL)
-	deleteURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s", deleteBody.Node, vmid)
-	deleteURLStr := deleteURL.String()
-
 	// Deleting target VM
+	vmDeleteURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s", deleteBody.Node, vmid))
 	log.Printf("Deleting VMID : %s in %s", vmid, deleteBody.Node)
-	_, deleteErr := qemu.DeleteVM(deleteURLStr, cookies)
+	_, deleteErr := qemu.DeleteVM(vmDeleteURL, cookies)
 	if deleteErr != nil {
 		log.Printf("Error: deleting VMID : %s in %s due to %s", vmid, deleteBody.Node, deleteErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting VMID : %s in %s due to %s", vmid, deleteBody.Node, deleteErr)})
@@ -278,9 +233,6 @@ func DeleteVM(c *fiber.Ctx) error {
 	@name : VM's name
 */
 func CloneVM(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
 	// Getting request's body
 	cloneBody := new(model.CloneBody)
 	if err := c.BodyParser(cloneBody); err != nil {
@@ -293,17 +245,14 @@ func CloneVM(c *fiber.Ctx) error {
 	node := c.Query("node")
 	vmid := c.Query("vmid")
 
-	// Getting Cookie, CSRF Token
 	cookies := config.GetCookies(c)
 
 	// Check VM Template from vmid
 	isTemplate := qemu.IsTemplate(node, vmid, cookies)
 	if isTemplate {
 		// Check spec of the VM before allocate node
-		vmInfoURL, _ := url.ParseRequestURI(hostURL)
-		vmInfoURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid)
-		vmInfoURLStr := vmInfoURL.String()
-		vm, vmInfoErr := qemu.GetVM(vmInfoURLStr, cookies)
+		vmGetURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
+		vm, vmInfoErr := qemu.GetVM(vmGetURL, cookies)
 		if vmInfoErr != nil {
 			log.Println(vm)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to get VM Template info for creating VM due to %s", vmInfoErr)})
@@ -324,12 +273,8 @@ func CloneVM(c *fiber.Ctx) error {
 		}
 
 		for _, workerNode := range workerNodes {
-			// Construct VM List URL
-			vmListURL, _ := url.ParseRequestURI(hostURL)
-			vmListURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node) // all node
-			vmListURLStr := vmListURL.String()
-
-			vmList, vmListErr := qemu.GetVMList(vmListURLStr, cookies)
+			vmListURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node))
+			vmList, vmListErr := qemu.GetVMList(vmListURL, cookies)
 			if vmListErr != nil {
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", workerNode.Node, vmListErr)})
 			}
@@ -354,14 +299,10 @@ func CloneVM(c *fiber.Ctx) error {
 		data.Set("target", target)
 		log.Println("clone body :", data)
 
-		// Construct URL
-		u, _ := url.ParseRequestURI(hostURL)
-		u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid)
-		urlStr := u.String()
-
-		// Getting info
+		// Cloning VM
 		log.Printf("Cloning VMID : %s in %s", newid, target)
-		info, cloneErr := qemu.CloneVM(urlStr, data, cookies)
+		vmCloneURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid))
+		info, cloneErr := qemu.CloneVM(vmCloneURL, data, cookies)
 		if cloneErr != nil {
 			log.Printf("Error: cloning VMID : %s in %s : %s", newid, target, cloneErr)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed cloning VMID : %s in %s due to %s", vmid, target, cloneErr)})
@@ -389,9 +330,6 @@ func CloneVM(c *fiber.Ctx) error {
 	@vmid : VM's ID
 */
 func CreateTemplate(c *fiber.Ctx) error {
-	// Get host's URL
-	hostURL := config.GetFromENV("PROXMOX_HOST")
-
 	// Getting request's body
 	templateBody := new(model.TemplateBody)
 	if err := c.BodyParser(templateBody); err != nil {
@@ -400,16 +338,11 @@ func CreateTemplate(c *fiber.Ctx) error {
 	}
 	vmid := fmt.Sprint(templateBody.VMID)
 
-	// Getting Cookie, CSRF Token
 	cookies := config.GetCookies(c)
 
-	// Construct Getting info URL
-	u, _ := url.ParseRequestURI(hostURL)
-	u.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", templateBody.Node, vmid)
-	urlStr := u.String()
-
 	// First check that target VM has been stopped
-	vm, err := qemu.GetVM(urlStr, cookies)
+	vmGetURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", templateBody.Node, vmid))
+	vm, err := qemu.GetVM(vmGetURL, cookies)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting detail from VMID: %s in %s due to %s", vmid, templateBody.Node, err)})
 	}
@@ -420,14 +353,10 @@ func CreateTemplate(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, templateBody.Node)})
 	}
 
-	// Construct URL
-	templateURL, _ := url.ParseRequestURI(hostURL)
-	templateURL.Path = fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/template", templateBody.Node, vmid)
-	templateURLStr := templateURL.String()
-
 	// Templating VM
 	log.Printf("Creating template from VMID : %s in %s", vmid, templateBody.Node)
-	_, templateErr := qemu.CreateTemplate(templateURLStr, cookies)
+	vmTemplateURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/template", templateBody.Node, vmid))
+	_, templateErr := qemu.CreateTemplate(vmTemplateURL, cookies)
 	if templateErr != nil {
 		log.Printf("Error: Could not template VMID : %s in %s : %s", vmid, templateBody.Node, templateErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed templating VMID : %s in %s due to %s", vmid, templateBody.Node, templateErr)})
