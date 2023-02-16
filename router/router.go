@@ -32,4 +32,11 @@ func SetupRoutes(app *fiber.App) {
 	status.Post("/suspend", handler.SuspendVM)
 	status.Post("/resume", handler.ResumeVM)
 	status.Post("/reset", handler.ResetVM)
+
+	// Cluster
+	cluster := app.Group("/cluster")
+
+	// Storage
+	storage := cluster.Group("storage")
+	storage.Get("/list", handler.GetStorageList)
 }

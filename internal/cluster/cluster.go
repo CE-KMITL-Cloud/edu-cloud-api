@@ -17,7 +17,6 @@ import (
 // GET /api2/json/cluster/resources
 func AllocateNode(spec model.VMSpec, cookies model.Cookies) ([]model.Node, string, error) {
 	log.Println("Getting nodes from cluster's resources ...")
-
 	url := config.GetURL("/api2/json/cluster/resources")
 	nodeResource := model.NodeResource{}
 	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
@@ -65,27 +64,27 @@ func AllocateNode(spec model.VMSpec, cookies model.Cookies) ([]model.Node, strin
 
 // GetStorageList - Getting RBD storage list
 // GET /api2/json/cluster/resources
-// func GetStorageList(cookies model.Cookies) ([]model.Storage, error) {
-// 	log.Println("Getting storages from cluster's resources ...")
+func GetStorageList(cookies model.Cookies) ([]string, error) {
+	log.Println("Getting storages from cluster's resources ...")
+	url := config.GetURL("/api2/json/cluster/resources")
+	storageResource := model.StorageResource{}
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
+	if err != nil {
+		return []string{}, err
+	}
+	if marshalErr := json.Unmarshal(body, &storageResource); marshalErr != nil {
+		return []string{}, marshalErr
+	}
 
-// 	url := config.GetURL("/api2/json/cluster/resources")
-// 	storageResource := model.StorageResource{}
-// 	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
-// 	if err != nil {
-// 		return []model.Storage{}, err
-// 	}
-// 	if marshalErr := json.Unmarshal(body, &storageResource); marshalErr != nil {
-// 		return []model.Storage{}, marshalErr
-// 	}
-
-// 	// Regex and return only worker nodes
-// 	var storageList []model.Storage
-// 	for i := 0; i < len(storageResource.Storages); i++ {
-// 		if storageResource.Storages[i].Type == "storage" && storageResource.Storages[i].PluginType == "rbd" {
-// 			storageList = append(storageList, storageResource.Storages[i])
-// 		}
-// 	}
-// 	log.Println(storageList)
-
-// 	return storageList, errors.New("error: Node have no enough free space")
-// }
+	// Filter recources to get only RBD storage
+	var storages []string
+	for i := 0; i < len(storageResource.Storages); i++ {
+		if storageResource.Storages[i].Type == "storage" && storageResource.Storages[i].PluginType == "rbd" {
+			if !config.Contains(storages, storageResource.Storages[i].Storage) {
+				storages = append(storages, storageResource.Storages[i].Storage)
+			}
+		}
+	}
+	log.Println(storages)
+	return storages, nil
+}
