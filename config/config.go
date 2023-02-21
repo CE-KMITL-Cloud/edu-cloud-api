@@ -34,6 +34,21 @@ func MBtoByte(input uint64) uint64 {
 	return input * Megabyte
 }
 
+// GreaterOrEqual - Compare sets of VM spec {cpu, mem (byte), disk (byte)}
+func GreaterOrEqual(cpuA, cpuB float64, memA, memB uint64, diskA, diskB uint64) bool {
+	if cpuA == cpuB && memA == memB && diskA == diskB {
+		return false
+	} else if cpuA > cpuB && memA >= memB && diskA >= diskB {
+		return true
+	} else if cpuA >= cpuB && memA > memB && diskA >= diskB {
+		return true
+	} else if cpuA >= cpuB && memA >= memB && diskA > diskB {
+		return true
+	} else {
+		return false
+	}
+}
+
 // GetFromENV - get item from .env
 func GetFromENV(item string) string {
 	viper.SetConfigFile(".env")

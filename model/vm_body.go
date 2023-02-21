@@ -33,6 +33,13 @@ type DeleteBody struct {
 	Node string `form:"node"`
 }
 
+// EditBody - struct for request Editing VM configuration
+type EditBody struct {
+	Memory uint64  `form:"memory"`
+	Cores  float64 `form:"cores"`
+	SCSI0  string  `form:"scsi0"`
+}
+
 // StartBody - struct for request Starting VM
 type StartBody struct {
 	VMID uint64 `form:"vmid"`

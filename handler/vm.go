@@ -75,9 +75,9 @@ func GetVMList(c *fiber.Ctx) error {
 	using Request's Body
 	@vmid : VM's ID
 	@name : VM's name
-	@memory : e.g. 1024 (MB)
-	@cores : e.g. 2 (cores)
-	@sockets : e.g. 2 (sockets of cpu)
+	@memory : 1024 (MB)
+	@cores : 2 (cores)
+	@sockets : 1 (sockets of cpu fixed to 1)
 	@onboot : {0, 1}
 	@scsi0 : "ceph-vm:32"
 	@cdrom : "cephfs:iso/ubuntu-20.04.4-live-server-amd64.iso"
@@ -370,4 +370,125 @@ func CreateTemplate(c *fiber.Ctx) error {
 	}
 	log.Printf("Error: Could not template VMID : %s in %s", vmid, templateBody.Node)
 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been templated correctly", vmid, templateBody.Node)})
+}
+
+// GetTemplateList - Getting VM Template list
+// GET /api2/json/cluster/resources
+func GetTemplateList(c *fiber.Ctx) error {
+	cookies := config.GetCookies(c)
+
+	// Getting VM Template list
+	log.Println("Getting VM Template list")
+	templateList, err := qemu.GetTemplateList(cookies)
+	if err != nil {
+		log.Println("Error: from getting VM's list :", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM Template list due to %s", err)})
+	}
+	log.Println("Got VM Template list")
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": templateList})
+}
+
+// EditVM - Set virtual machine options (asynchrounous API).
+// POST /api2/json/nodes/{node}/qemu/{vmid}/config
+/*
+	using Query Params
+	@node : node's name
+	@vmid : VM's ID
+
+	using Request's Body
+	@cores : Amount of CPU core
+	@memory : Amount of RAM in (MB)
+	@scsi0 : Amount of Disk in Storage_ID:Size_in_GiB format
+*/
+func EditVM(c *fiber.Ctx) error {
+	// Getting request's body
+	editBody := new(model.EditBody)
+	if err := c.BodyParser(editBody); err != nil {
+		log.Println("Error: Could not parse body parser to edit VM's body")
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to edit VM's body"})
+	}
+	editCores := fmt.Sprint(editBody.Cores)
+	editMemory := fmt.Sprint(editBody.Memory)
+	editMaxMemory := config.MBtoByte(editBody.Memory)
+
+	// Getting data from query & Mapping values
+	node := c.Query("node")
+	vmid := c.Query("vmid")
+
+	cookies := config.GetCookies(c)
+	nodeInfo, nodeInfoErr := cluster.GetNode(node, cookies)
+	if nodeInfoErr != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to get node info for editing VM due to %s", nodeInfoErr)})
+	}
+	freeMemory, freeCPU, freeDisk := nodeInfo.MaxMem-nodeInfo.Mem, nodeInfo.MaxCPU-nodeInfo.CPU, nodeInfo.MaxDisk-nodeInfo.Disk
+
+	// Check VM spec before edit configuration
+	vmGetURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
+	vm, vmInfoErr := qemu.GetVM(vmGetURL, cookies)
+	if vmInfoErr != nil {
+		log.Println(vm)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to get VM info for editing VM due to %s", vmInfoErr)})
+	}
+
+	// Parse mem, cpu, disk for checking free space
+	vmSpec := model.VMSpec{
+		Memory: vm.Info.MaxMem,
+		CPU:    vm.Info.CPUs,
+		Disk:   vm.Info.MaxDisk,
+	}
+
+	// Extracting Max Disk in GiB
+	r := regexp.MustCompile(config.MatchNumber)
+	maxDiskStr := r.FindStringSubmatch(editBody.SCSI0)[1]
+	maxDisk, parseErr := strconv.ParseUint(maxDiskStr, 10, 64)
+	if parseErr != nil {
+		log.Println("Error: extract max disk :", parseErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to extract max disk field for editing VM due to %s", parseErr)})
+	}
+	editBodyMaxDisk := config.GBtoByte(maxDisk)
+
+	// Construct payload
+	data := url.Values{}
+	data.Set("cores", editCores)
+	data.Set("memory", editMemory)
+	data.Set("scsi0", editBody.SCSI0)
+
+	log.Printf("VM spec : {cpu: %f, mem: %d, disk: %d}", vmSpec.CPU, vmSpec.Memory, vmSpec.Disk)
+	log.Printf("Edit spec : {cpu: %f, mem: %d, disk: %d}", editBody.Cores, editMaxMemory, editBodyMaxDisk)
+
+	extendMemory, extendCPU, extendDisk := editMaxMemory-vmSpec.Memory, editBody.Cores-vmSpec.CPU, editBodyMaxDisk-vmSpec.Disk
+	if editMaxMemory < vmSpec.Memory {
+		extendMemory = vmSpec.Memory - editMaxMemory
+	}
+	if editBody.Cores < vmSpec.CPU {
+		extendCPU = vmSpec.CPU - editBody.Cores
+	}
+	if editBodyMaxDisk < vmSpec.Disk {
+		extendDisk = vmSpec.Disk - editBodyMaxDisk
+	}
+
+	log.Printf("Free Node spec : {cpu: %f, mem: %d, disk: %d}", freeCPU, freeMemory, freeDisk)
+	log.Printf("Extended spec : {cpu: %f, mem: %d, disk: %d}", extendCPU, extendMemory, extendDisk)
+	log.Printf("Remain Node spec : {cpu: %f, mem: %d, disk: %d}", (freeCPU - extendCPU), (freeMemory - extendMemory), (freeDisk - extendDisk))
+
+	// Check free space of node
+	if freeCPU > extendCPU && freeMemory > extendMemory && freeDisk > extendDisk {
+		// Approve if request is spec increasing only
+		if config.GreaterOrEqual(editBody.Cores, vmSpec.CPU, editMaxMemory, vmSpec.Memory, editBodyMaxDisk, vmSpec.Disk) {
+			log.Println("Able to edit VM config")
+			log.Printf("Editing VMID : %s in %s", vmid, node)
+			vmEditURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/config", node, vmid))
+			info, editErr := qemu.EditVM(vmEditURL, data, cookies)
+			if editErr != nil {
+				log.Printf("Error: cloning VMID : %s in %s : %s", vmid, node, editErr)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed editing VMID : %s in %s due to %s", vmid, node, editErr)})
+			}
+			log.Println(info)
+			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Edited VM : %s in %s successfully", vmid, node)})
+		}
+		log.Printf("Error: editing VMID : %s in %s due to request spec is lower or equal to current spec", vmid, node)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Could not edit VM due to request spec is lower or equal to current spec"})
+	}
+	log.Printf("Error: editing VMID : %s in %s due to have no enough free space", vmid, node)
+	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": "Node have no enough free space"})
 }

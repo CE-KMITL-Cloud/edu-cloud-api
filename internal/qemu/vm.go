@@ -3,6 +3,7 @@ package qemu
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -103,11 +104,53 @@ func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error)
 	return response, nil
 }
 
+// GetTemplateList - Getting VM Template list
+// GET /api2/json/cluster/resources
+func GetTemplateList(cookies model.Cookies) ([]model.TemplateInfo, error) {
+	log.Println("Getting VM Template from cluster's resources ...")
+	url := config.GetURL("/api2/json/cluster/resources")
+	resources := model.TemplateList{}
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
+	if err != nil {
+		return []model.TemplateInfo{}, err
+	}
+	if marshalErr := json.Unmarshal(body, &resources); marshalErr != nil {
+		return []model.TemplateInfo{}, marshalErr
+	}
+
+	// Filter recources to get only VM Template
+	var idList []string
+	var templateList []model.TemplateInfo
+	for i := 0; i < len(resources.TemplateList); i++ {
+		if resources.TemplateList[i].Type == "qemu" && resources.TemplateList[i].Template == 1 {
+			if !config.Contains(idList, resources.TemplateList[i].ID) {
+				idList = append(idList, resources.TemplateList[i].ID)
+				templateList = append(templateList, resources.TemplateList[i])
+			}
+		}
+	}
+	log.Println(templateList)
+	return templateList, nil
+}
+
 // PowerManagement - POST /api2/json/nodes/{node}/qemu/{vmid}/status/{action}
 /*
-	action : { start, stop, suspend, shutdown, resume, reboot, reset }
+	action : { start, stop, suspend, shutdown, resume, reset }
 */
 func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
+	response := model.VMResponse{}
+	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
+	if err != nil {
+		return response, err
+	}
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}
+
+// EditVM - POST /api2/json/nodes/{node}/qemu/{vmid}/config
+func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {

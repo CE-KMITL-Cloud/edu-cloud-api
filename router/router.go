@@ -23,6 +23,8 @@ func SetupRoutes(app *fiber.App) {
 	vm.Delete("/destroy", handler.DeleteVM)
 	vm.Post("/clone", handler.CloneVM)
 	vm.Post("/template", handler.CreateTemplate)
+	vm.Get("/template/list", handler.GetTemplateList)
+	vm.Post("/edit", handler.EditVM)
 
 	// VM Power Management
 	status := vm.Group("/status")
@@ -39,4 +41,8 @@ func SetupRoutes(app *fiber.App) {
 	// Storage
 	storage := cluster.Group("storage")
 	storage.Get("/list", handler.GetStorageList)
+
+	// Node
+	node := cluster.Group("node")
+	node.Get("/:name", handler.GetNode)
 }

@@ -91,3 +91,22 @@ type VMTemplateInfo struct {
 	QmpStatus string  `json:"qmpstatus"`
 	HA        HA      `json:"ha"`
 }
+
+// TemplateList - VM Template list
+type TemplateList struct {
+	TemplateList []TemplateInfo `json:"data"`
+}
+
+// TemplateInfo - VM Template info
+type TemplateInfo struct {
+	Template uint8   `json:"template"` // {0, 1}
+	Type     string  `json:"type"`
+	Node     string  `json:"node"`
+	ID       string  `json:"id"`
+	MaxMem   uint64  `json:"maxmem"`
+	Name     string  `json:"name"`
+	VMID     uint64  `json:"vmid"`
+	MaxDisk  uint64  `json:"maxdisk"`
+	Status   string  `json:"status"`
+	MaxCPU   float64 `json:"maxcpu"`
+}
