@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/edu-cloud-api/model"
@@ -83,7 +84,8 @@ func GetListFromENV(item []string) []string {
 
 // GetURL - Constructing Proxmox's API URL
 func GetURL(query string) string {
-	hostURL := GetFromENV("PROXMOX_HOST")
+	// hostURL := GetFromENV("PROXMOX_HOST")
+	hostURL := os.Getenv("PROXMOX_HOST")
 	u, _ := url.ParseRequestURI(hostURL)
 	u.Path = query
 	return u.String()
@@ -91,7 +93,6 @@ func GetURL(query string) string {
 
 // SendRequest - Constructing HTTP client and Sending request
 func SendRequest(httpMethod, url string, data url.Values, cookies model.Cookies) (*http.Response, error) {
-	// Construct request
 	req, err := http.NewRequest(httpMethod, url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
@@ -112,7 +113,6 @@ func SendRequest(httpMethod, url string, data url.Values, cookies model.Cookies)
 
 // SendRequestWithErr - Constructing HTTP client and Sending request
 func SendRequestWithErr(httpMethod, url string, data url.Values, cookies model.Cookies) ([]byte, error) {
-	// Construct request
 	req, err := http.NewRequest(httpMethod, url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
@@ -144,7 +144,6 @@ func SendRequestWithErr(httpMethod, url string, data url.Values, cookies model.C
 
 // SendRequestWithoutCookie - Constructing HTTP client and Sending request without cookies
 func SendRequestWithoutCookie(httpMethod, url string, data url.Values) ([]byte, error) {
-	// Construct request
 	req, err := http.NewRequest(httpMethod, url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err

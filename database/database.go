@@ -4,8 +4,8 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 
-	"github.com/edu-cloud-api/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -22,7 +22,11 @@ var DB Dbinstance
 // ConnectDb - create connection to db
 func ConnectDb() {
 	items := []string{"DB_HOST", "DB_USER", "DB_PASS", "DB_NAME", "DB_PORT"}
-	dbItems := config.GetListFromENV(items)
+	// dbItems := config.GetListFromENV(items)
+	var dbItems []string
+	for index := range items {
+		dbItems = append(dbItems, os.Getenv(items[index]))
+	}
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", dbItems[0], dbItems[1], dbItems[2], dbItems[3], dbItems[4])
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

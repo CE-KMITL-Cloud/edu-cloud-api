@@ -430,6 +430,12 @@ func EditVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to get VM info for editing VM due to %s", vmInfoErr)})
 	}
 
+	// If target VM's status is not "stopped" then return
+	if vm.Info.Status != "stopped" {
+		log.Printf("Error: editing VMID : %s in %s due to VM has not been stopped", vmid, node)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Target VMID: %s in %s hasn't been stopped", vmid, node)})
+	}
+
 	// Parse mem, cpu, disk for checking free space
 	vmSpec := model.VMSpec{
 		Memory: vm.Info.MaxMem,
