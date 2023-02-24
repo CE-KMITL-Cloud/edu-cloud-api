@@ -37,7 +37,7 @@ type DeleteBody struct {
 type EditBody struct {
 	Memory uint64  `form:"memory"`
 	Cores  float64 `form:"cores"`
-	SCSI0  string  `form:"scsi0"`
+	Disk   uint64  `form:"disk"`
 }
 
 // StartBody - struct for request Starting VM

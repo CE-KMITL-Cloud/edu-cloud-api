@@ -33,6 +33,7 @@ func GetTicket(c *fiber.Ctx) error {
 	data := url.Values{}
 	data.Set("username", userLogin.Username)
 	data.Set("password", userLogin.Password)
+	data.Set("realm", "IAM-CE")
 
 	// Getting Ticket
 	log.Printf("Getting ticket from user : %s", userLogin.Username)
@@ -59,4 +60,16 @@ func GetTicket(c *fiber.Ctx) error {
 
 	log.Printf("Finished getting ticket by user : %s", userLogin.Username)
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Getting ticket from user %s successfully", userLogin.Username)})
+}
+
+// RealmSync - Syncs users and/or groups from the configured LDAP
+func RealmSync(c *fiber.Ctx) error {
+	cookies := config.GetCookies(c)
+	log.Println("Realm sync started ...")
+	err := access.RealmSync(cookies)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed realm syncing due to %s", err)})
+	}
+	log.Println("Realm sync finished successfully")
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": "Realm sync finished successfully"})
 }

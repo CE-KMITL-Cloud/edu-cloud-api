@@ -31,7 +31,7 @@ func AllocateNode(spec model.VMSpec, cookies model.Cookies) ([]model.Node, strin
 	var nodeList []model.Node
 	for i := 0; i < len(nodeResource.Nodes); i++ {
 		r, _ := regexp.Compile(config.WorkerNode) // match node which start with work-{number}
-		if nodeResource.Nodes[i].Type == "node" && r.MatchString(nodeResource.Nodes[i].Node) {
+		if nodeResource.Nodes[i].Type == "node" && r.MatchString(nodeResource.Nodes[i].Node) && nodeResource.Nodes[i].Status != "offline" {
 			nodeList = append(nodeList, nodeResource.Nodes[i])
 		}
 	}

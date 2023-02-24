@@ -3,6 +3,7 @@ package access
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -23,4 +24,18 @@ func GetTicket(url string, data url.Values) (model.Ticket, error) {
 		return ticket, marshalErr
 	}
 	return ticket, nil
+}
+
+// RealmSync - Syncs users and/or groups from the configured LDAP
+// POST /api2/json/access/domains/{realm}/sync
+func RealmSync(cookies model.Cookies) error {
+	data := url.Values{}
+	data.Set("scope", "both")
+	url := config.GetURL("/api2/json/access/domains/IAM-CE/sync")
+	info, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
+	if err != nil {
+		return err
+	}
+	log.Println(string(info))
+	return nil
 }

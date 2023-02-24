@@ -12,7 +12,7 @@ import (
 
 	"github.com/edu-cloud-api/model"
 	"github.com/gofiber/fiber/v2"
-	"github.com/spf13/viper"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -52,31 +52,16 @@ func GreaterOrEqual(cpuA, cpuB float64, memA, memB uint64, diskA, diskB uint64) 
 
 // GetFromENV - get item from .env
 func GetFromENV(item string) string {
-	viper.SetConfigFile(".env")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("Error while reading config file %s", err)
-	}
-	value, ok := viper.Get(item).(string)
-	if !ok {
-		log.Fatalf("Error while getting item : %s", value)
-	}
-	return value
+	godotenv.Load(".env")
+	return os.Getenv(item)
 }
 
 // GetListFromENV - get item list from .env
 func GetListFromENV(item []string) []string {
-	viper.SetConfigFile(".env")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("Error while reading config file %s", err)
-	}
+	godotenv.Load(".env")
 	var list []string
 	for i := 0; i < len(item); i++ {
-		value, ok := viper.Get(item[i]).(string)
-		if !ok {
-			log.Fatalf("Error while getting item : %s", value)
-		}
+		value := os.Getenv(item[i])
 		list = append(list, value)
 	}
 	return list

@@ -51,6 +51,7 @@ func GetVM(c *fiber.Ctx) error {
 	? @username : account's username
 	@node : node's name
 */
+// TODO : Get from all node
 func GetVMList(c *fiber.Ctx) error {
 	// ? username := c.Query("username")
 	node := c.Query("node")
@@ -84,7 +85,6 @@ func GetVMList(c *fiber.Ctx) error {
 	@net0 : "virtio,bridge=vmbr0,firewall=1"
 	@scsihw : "virtio-scsi-single"
 */
-// TODO : Specific resource pool by add pool in request's body
 func CreateVM(c *fiber.Ctx) error {
 	createBody := new(model.CreateBody)
 	if err := c.BodyParser(createBody); err != nil {
@@ -390,6 +390,7 @@ func GetTemplateList(c *fiber.Ctx) error {
 
 // EditVM - Set virtual machine options (asynchrounous API).
 // POST /api2/json/nodes/{node}/qemu/{vmid}/config
+// PUT /api2/json/nodes/{node}/qemu/{vmid}/resize
 /*
 	using Query Params
 	@node : node's name
@@ -398,7 +399,7 @@ func GetTemplateList(c *fiber.Ctx) error {
 	using Request's Body
 	@cores : Amount of CPU core
 	@memory : Amount of RAM in (MB)
-	@scsi0 : Amount of Disk in Storage_ID:Size_in_GiB format
+	@disk : Amount of Disk (scsi0) to increase in Size_in_GiB format
 */
 func EditVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -442,54 +443,52 @@ func EditVM(c *fiber.Ctx) error {
 		CPU:    vm.Info.CPUs,
 		Disk:   vm.Info.MaxDisk,
 	}
-
-	// Extracting Max Disk in GiB
-	r := regexp.MustCompile(config.MatchNumber)
-	maxDiskStr := r.FindStringSubmatch(editBody.SCSI0)[1]
-	maxDisk, parseErr := strconv.ParseUint(maxDiskStr, 10, 64)
-	if parseErr != nil {
-		log.Println("Error: extract max disk :", parseErr)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to extract max disk field for editing VM due to %s", parseErr)})
-	}
-	editBodyMaxDisk := config.GBtoByte(maxDisk)
+	editBodyByteDisk := config.GBtoByte(editBody.Disk)
+	editBodyDisk := fmt.Sprint(`+`, editBodyByteDisk)
 
 	// Construct payload
 	data := url.Values{}
 	data.Set("cores", editCores)
 	data.Set("memory", editMemory)
-	data.Set("scsi0", editBody.SCSI0)
 
-	log.Printf("VM spec : {cpu: %f, mem: %d, disk: %d}", vmSpec.CPU, vmSpec.Memory, vmSpec.Disk)
-	log.Printf("Edit spec : {cpu: %f, mem: %d, disk: %d}", editBody.Cores, editMaxMemory, editBodyMaxDisk)
+	resizeData := url.Values{}
+	resizeData.Set("disk", "scsi0")
+	resizeData.Set("size", editBodyDisk)
+	log.Println("resize data:", resizeData)
 
-	extendMemory, extendCPU, extendDisk := editMaxMemory-vmSpec.Memory, editBody.Cores-vmSpec.CPU, editBodyMaxDisk-vmSpec.Disk
+	extendMemory, extendCPU, extendDisk := editMaxMemory-vmSpec.Memory, editBody.Cores-vmSpec.CPU, editBodyByteDisk+vmSpec.Disk
 	if editMaxMemory < vmSpec.Memory {
 		extendMemory = vmSpec.Memory - editMaxMemory
 	}
 	if editBody.Cores < vmSpec.CPU {
 		extendCPU = vmSpec.CPU - editBody.Cores
 	}
-	if editBodyMaxDisk < vmSpec.Disk {
-		extendDisk = vmSpec.Disk - editBodyMaxDisk
-	}
 
+	log.Printf("VM spec : {cpu: %f, mem: %d, disk: %d}", vmSpec.CPU, vmSpec.Memory, vmSpec.Disk)
+	log.Printf("Edit spec : {cpu: %f, mem: %d, disk: %d}", editBody.Cores, editMaxMemory, extendDisk)
 	log.Printf("Free Node spec : {cpu: %f, mem: %d, disk: %d}", freeCPU, freeMemory, freeDisk)
-	log.Printf("Extended spec : {cpu: %f, mem: %d, disk: %d}", extendCPU, extendMemory, extendDisk)
-	log.Printf("Remain Node spec : {cpu: %f, mem: %d, disk: %d}", (freeCPU - extendCPU), (freeMemory - extendMemory), (freeDisk - extendDisk))
+	log.Printf("Extended spec : {cpu: %f, mem: %d, disk: %d}", extendCPU, extendMemory, editBodyByteDisk)
+	log.Printf("Remain Node spec : {cpu: %f, mem: %d, disk: %d}", (freeCPU - extendCPU), (freeMemory - extendMemory), (freeDisk - editBodyByteDisk))
 
 	// Check free space of node
-	if freeCPU > extendCPU && freeMemory > extendMemory && freeDisk > extendDisk {
+	if freeCPU > extendCPU && freeMemory > extendMemory && freeDisk > editBodyByteDisk {
 		// Approve if request is spec increasing only
-		if config.GreaterOrEqual(editBody.Cores, vmSpec.CPU, editMaxMemory, vmSpec.Memory, editBodyMaxDisk, vmSpec.Disk) {
+		if config.GreaterOrEqual(editBody.Cores, vmSpec.CPU, editMaxMemory, vmSpec.Memory, editBodyByteDisk+vmSpec.Disk, vmSpec.Disk) {
 			log.Println("Able to edit VM config")
 			log.Printf("Editing VMID : %s in %s", vmid, node)
 			vmEditURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/config", node, vmid))
 			info, editErr := qemu.EditVM(vmEditURL, data, cookies)
 			if editErr != nil {
-				log.Printf("Error: cloning VMID : %s in %s : %s", vmid, node, editErr)
+				log.Printf("Error: editing VMID : %s in %s : %s", vmid, node, editErr)
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed editing VMID : %s in %s due to %s", vmid, node, editErr)})
 			}
 			log.Println(info)
+			resizeDiskURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/resize", node, vmid))
+			_, resizeInfoErr := qemu.ResizeDisk(resizeDiskURL, resizeData, cookies)
+			if resizeInfoErr != nil {
+				log.Printf("Error: editing disk on VMID : %s in %s : %s", vmid, node, editErr)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed editing disk on VMID : %s in %s due to %s", vmid, node, resizeInfoErr)})
+			}
 			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Edited VM : %s in %s successfully", vmid, node)})
 		}
 		log.Printf("Error: editing VMID : %s in %s due to request spec is lower or equal to current spec", vmid, node)

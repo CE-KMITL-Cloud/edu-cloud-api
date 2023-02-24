@@ -161,3 +161,16 @@ func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMRespons
 	}
 	return response, nil
 }
+
+// ResizeDisk - PUT /api2/json/nodes/{node}/qemu/{vmid}/resize
+func ResizeDisk(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
+	response := model.VMResponse{}
+	body, err := config.SendRequestWithErr(http.MethodPut, url, data, cookies)
+	if err != nil {
+		return response, err
+	}
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}

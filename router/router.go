@@ -11,6 +11,10 @@ func SetupRoutes(app *fiber.App) {
 	// Health-Check
 	app.Get("/", handler.Healthy)
 
+	// Realm
+	realm := app.Group("/realm")
+	realm.Post("/sync", handler.RealmSync)
+
 	// Access
 	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
