@@ -63,6 +63,7 @@ func GetTicket(c *fiber.Ctx) error {
 }
 
 // RealmSync - Syncs users and/or groups from the configured LDAP
+// ! Not use
 func RealmSync(c *fiber.Ctx) error {
 	cookies := config.GetCookies(c)
 	log.Println("Realm sync started ...")

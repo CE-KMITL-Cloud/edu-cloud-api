@@ -46,3 +46,22 @@ type Storage struct {
 	Shared     uint8  `json:"shared"`
 	PluginType string `json:"plugintype"`
 }
+
+// VMsList - VM list
+type VMsList struct {
+	VMsList []VMsInfo `json:"data"`
+}
+
+// VMsInfo - VMs info
+type VMsInfo struct {
+	Template uint8   `json:"template"` // {0, 1}
+	Type     string  `json:"type"`
+	Node     string  `json:"node"`
+	ID       string  `json:"id"`
+	MaxMem   uint64  `json:"maxmem"`
+	Name     string  `json:"name"`
+	VMID     uint64  `json:"vmid"`
+	MaxDisk  uint64  `json:"maxdisk"`
+	Status   string  `json:"status"`
+	MaxCPU   float64 `json:"maxcpu"`
+}

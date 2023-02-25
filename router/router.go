@@ -8,26 +8,31 @@ import (
 
 // SetupRoutes - setting up router
 func SetupRoutes(app *fiber.App) {
-	// Health-Check
+	// Health Check
 	app.Get("/", handler.Healthy)
 
 	// Realm
-	realm := app.Group("/realm")
-	realm.Post("/sync", handler.RealmSync)
+	// realm := app.Group("/realm")
+	// realm.Post("/sync", handler.RealmSync) // ! Not use
 
 	// Access
 	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
 
+	// Node
+	node := app.Group("/node")
+	node.Get(":node/vm/list", handler.GetVMListByNode)
+	node.Get(":node/vm/:vmid", handler.GetVM)
+
 	// VM
 	vm := app.Group("/vm")
-	vm.Get("/info", handler.GetVM)
 	vm.Get("/list", handler.GetVMList)
+	vm.Get("/template/list", handler.GetTemplateList)
+
 	vm.Post("/create", handler.CreateVM)
 	vm.Delete("/destroy", handler.DeleteVM)
 	vm.Post("/clone", handler.CloneVM)
 	vm.Post("/template", handler.CreateTemplate)
-	vm.Get("/template/list", handler.GetTemplateList)
 	vm.Post("/edit", handler.EditVM)
 
 	// VM Power Management
@@ -47,6 +52,6 @@ func SetupRoutes(app *fiber.App) {
 	storage.Get("/list", handler.GetStorageList)
 
 	// Node
-	node := cluster.Group("node")
-	node.Get("/:name", handler.GetNode)
+	clusterNode := cluster.Group("node")
+	clusterNode.Get("/:name", handler.GetNode)
 }

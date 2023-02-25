@@ -28,6 +28,7 @@ func GetTicket(url string, data url.Values) (model.Ticket, error) {
 
 // RealmSync - Syncs users and/or groups from the configured LDAP
 // POST /api2/json/access/domains/{realm}/sync
+// ! Not used
 func RealmSync(cookies model.Cookies) error {
 	data := url.Values{}
 	data.Set("scope", "both")

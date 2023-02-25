@@ -29,8 +29,8 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	return info, nil
 }
 
-// GetVMList - GET /api2/json/nodes/{node}/qemu
-func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
+// GetVMListByNode - GET /api2/json/nodes/{node}/qemu
+func GetVMListByNode(url string, cookies model.Cookies) (model.VMList, error) {
 	// TODO: should return only user's VM
 	// user := model.User{}
 	// database.DB.Db.Find(&user, "username = ?", username)
@@ -45,6 +45,39 @@ func GetVMList(url string, cookies model.Cookies) (model.VMList, error) {
 		return info, marshalErr
 	}
 	return info, nil
+}
+
+// GetVMList - Getting VM list
+// GET /api2/json/cluster/resources
+func GetVMList(cookies model.Cookies) ([]model.VMsInfo, error) {
+	// TODO: should return only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
+
+	log.Println("Getting VM list from cluster's resources ...")
+	url := config.GetURL("/api2/json/cluster/resources")
+	resources := model.VMsList{}
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
+	if err != nil {
+		return []model.VMsInfo{}, err
+	}
+	if marshalErr := json.Unmarshal(body, &resources); marshalErr != nil {
+		return []model.VMsInfo{}, marshalErr
+	}
+
+	// Filter recources to get only VM (Template not included)
+	var vmIDList []string
+	var vmList []model.VMsInfo
+	for i := 0; i < len(resources.VMsList); i++ {
+		if resources.VMsList[i].Type == "qemu" && resources.VMsList[i].Template == 0 {
+			if !config.Contains(vmIDList, resources.VMsList[i].ID) {
+				vmIDList = append(vmIDList, resources.VMsList[i].ID)
+				vmList = append(vmList, resources.VMsList[i])
+			}
+		}
+	}
+	return vmList, nil
 }
 
 // CreateVM - POST /api2/json/nodes/{node}/qemu
@@ -106,26 +139,31 @@ func CreateTemplate(url string, cookies model.Cookies) (model.VMResponse, error)
 
 // GetTemplateList - Getting VM Template list
 // GET /api2/json/cluster/resources
-func GetTemplateList(cookies model.Cookies) ([]model.TemplateInfo, error) {
+func GetTemplateList(cookies model.Cookies) ([]model.VMsInfo, error) {
+	// TODO: should return only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
+
 	log.Println("Getting VM Template from cluster's resources ...")
 	url := config.GetURL("/api2/json/cluster/resources")
-	resources := model.TemplateList{}
+	resources := model.VMsList{}
 	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
 	if err != nil {
-		return []model.TemplateInfo{}, err
+		return []model.VMsInfo{}, err
 	}
 	if marshalErr := json.Unmarshal(body, &resources); marshalErr != nil {
-		return []model.TemplateInfo{}, marshalErr
+		return []model.VMsInfo{}, marshalErr
 	}
 
 	// Filter recources to get only VM Template
 	var idList []string
-	var templateList []model.TemplateInfo
-	for i := 0; i < len(resources.TemplateList); i++ {
-		if resources.TemplateList[i].Type == "qemu" && resources.TemplateList[i].Template == 1 {
-			if !config.Contains(idList, resources.TemplateList[i].ID) {
-				idList = append(idList, resources.TemplateList[i].ID)
-				templateList = append(templateList, resources.TemplateList[i])
+	var templateList []model.VMsInfo
+	for i := 0; i < len(resources.VMsList); i++ {
+		if resources.VMsList[i].Type == "qemu" && resources.VMsList[i].Template == 1 {
+			if !config.Contains(idList, resources.VMsList[i].ID) {
+				idList = append(idList, resources.VMsList[i].ID)
+				templateList = append(templateList, resources.VMsList[i])
 			}
 		}
 	}
@@ -138,6 +176,11 @@ func GetTemplateList(cookies model.Cookies) ([]model.TemplateInfo, error) {
 	action : { start, stop, suspend, shutdown, resume, reset }
 */
 func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
+	// TODO: should return only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
+
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {
@@ -151,6 +194,11 @@ func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.
 
 // EditVM - POST /api2/json/nodes/{node}/qemu/{vmid}/config
 func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
+	// TODO: should return only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
+
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {
@@ -164,6 +212,11 @@ func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMRespons
 
 // ResizeDisk - PUT /api2/json/nodes/{node}/qemu/{vmid}/resize
 func ResizeDisk(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
+	// TODO: should return only user's VM
+	// user := model.User{}
+	// database.DB.Db.Find(&user, "username = ?", username)
+	// log.Println(user)
+
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPut, url, data, cookies)
 	if err != nil {

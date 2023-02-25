@@ -20,19 +20,17 @@ import (
 // GetVM - Getting specific VM's info
 // GET /api2/json/nodes/{node}/qemu/{vmid}/status/current
 /*
-	using Query Params
+	using Params
 	? @username : account's username
 	@node : node's name
 	@vmid : VM's ID
 */
 func GetVM(c *fiber.Ctx) error {
 	// ? username := c.Query("username")
-	node := c.Query("node")
-	vmid := c.Query("vmid")
+	node := c.Params("node")
+	vmid := c.Params("vmid")
 
 	cookies := config.GetCookies(c)
-
-	// Getting VM's info
 	log.Printf("Getting detail from VMID : %s in %s", vmid, node)
 	url := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
 	info, err := qemu.GetVM(url, cookies)
@@ -44,29 +42,40 @@ func GetVM(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": info})
 }
 
-// GetVMList - Getting VM list from given node
+// GetVMListByNode - Getting VM list from given node
 // GET /api2/json/nodes/{node}/qemu
 /*
 	using Query Params
 	? @username : account's username
+
+	using Params
 	@node : node's name
 */
-// TODO : Get from all node
-func GetVMList(c *fiber.Ctx) error {
+func GetVMListByNode(c *fiber.Ctx) error {
 	// ? username := c.Query("username")
-	node := c.Query("node")
+	node := c.Params("node")
 
 	cookies := config.GetCookies(c)
-
-	// Getting VM list
 	url := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", node))
 	log.Printf("Getting VM list from %s", node)
-	vmList, err := qemu.GetVMList(url, cookies)
+	vmList, err := qemu.GetVMListByNode(url, cookies)
 	if err != nil {
 		log.Println("Error: from getting VM's list :", err)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", node, err)})
 	}
 	log.Printf("Got VM list from node : %s", node)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": vmList})
+}
+
+// GetVMList - Getting VM list
+// GET /api2/json/cluster/resources
+func GetVMList(c *fiber.Ctx) error {
+	cookies := config.GetCookies(c)
+	vmList, err := qemu.GetVMList(cookies)
+	if err != nil {
+		log.Println("Error: from getting VM list :", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list due to %s", err)})
+	}
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": vmList})
 }
 
@@ -134,7 +143,7 @@ func CreateVM(c *fiber.Ctx) error {
 	// Check duplicate vmid
 	for _, workerNode := range workerNodes {
 		vmListURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node))
-		vmList, vmListErr := qemu.GetVMList(vmListURL, cookies)
+		vmList, vmListErr := qemu.GetVMListByNode(vmListURL, cookies)
 		if vmListErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", workerNode.Node, vmListErr)})
 		}
@@ -274,7 +283,7 @@ func CloneVM(c *fiber.Ctx) error {
 
 		for _, workerNode := range workerNodes {
 			vmListURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", workerNode.Node))
-			vmList, vmListErr := qemu.GetVMList(vmListURL, cookies)
+			vmList, vmListErr := qemu.GetVMListByNode(vmListURL, cookies)
 			if vmListErr != nil {
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VM list from %s due to %s", workerNode.Node, vmListErr)})
 			}
@@ -376,8 +385,6 @@ func CreateTemplate(c *fiber.Ctx) error {
 // GET /api2/json/cluster/resources
 func GetTemplateList(c *fiber.Ctx) error {
 	cookies := config.GetCookies(c)
-
-	// Getting VM Template list
 	log.Println("Getting VM Template list")
 	templateList, err := qemu.GetTemplateList(cookies)
 	if err != nil {
