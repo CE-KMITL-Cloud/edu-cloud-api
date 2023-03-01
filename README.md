@@ -27,3 +27,14 @@ Step: 2 run
 ```
 docker-compose up -d
 ```
+
+## Kong API Gateway
+Clone This repo
+```
+git clone https://github.com/CE-KMITL-Cloud/edu-cloud-api.git
+cd Kong
+```
+And compose up
+```
+docker-compose up -d
+```
