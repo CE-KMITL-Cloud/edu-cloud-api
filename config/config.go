@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	REALM       = "@pve"
 	AUTH_COOKIE = "PVEAuthCookie"
 	CSRF_TOKEN  = "CSRFPreventionToken"
 	URL_ENCODED = "application/x-www-form-urlencoded"
@@ -133,6 +134,36 @@ func SendRequestWithoutCookie(httpMethod, url string, data url.Values) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
+	if data != nil {
+		req.Header.Add("Content-Type", URL_ENCODED)
+	}
+
+	client := &http.Client{}
+	resp, sendErr := client.Do(req)
+	if sendErr != nil {
+		return nil, sendErr
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: with status", resp.Status)
+		return nil, errors.New(resp.Status)
+	}
+	respBody, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, readErr
+	}
+	// log.Println(string(respBody))
+	return respBody, nil
+}
+
+// SendRequestUsingToken - Constructing HTTP client and Sending request using token
+func SendRequestUsingToken(httpMethod, url string, data url.Values) ([]byte, error) {
+	req, err := http.NewRequest(httpMethod, url, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", GetFromENV("PROXMOX_API_KEY"))
 	if data != nil {
 		req.Header.Add("Content-Type", URL_ENCODED)
 	}

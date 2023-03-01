@@ -3,7 +3,6 @@ package access
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -12,31 +11,58 @@ import (
 )
 
 // GetTicket - get cookie & CSRF prevention token from Proxmox
-func GetTicket(url string, data url.Values) (model.Ticket, error) {
-	// Return objects
+func GetTicket(data url.Values) (model.Ticket, error) {
 	ticket := model.Ticket{}
+	url := config.GetURL("/api2/json/access/ticket")
 	body, err := config.SendRequestWithoutCookie(http.MethodPost, url, data)
 	if err != nil {
 		return ticket, err
 	}
-	// Unmarshal body to struct
 	if marshalErr := json.Unmarshal(body, &ticket); marshalErr != nil {
 		return ticket, marshalErr
 	}
 	return ticket, nil
 }
 
+// CreateUser - create user and set group in proxmox
+func CreateUser(data url.Values) (string, error) {
+	url := config.GetURL("/api2/json/access/users")
+	body, err := config.SendRequestUsingToken(http.MethodPost, url, data)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+// UpdateUser - update user in proxmox
+func UpdateUser(url string, data url.Values, cookies model.Cookies) (string, error) {
+	body, err := config.SendRequestWithErr(http.MethodPut, url, data, cookies)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+// DeleteUser - delete user in proxmox
+func DeleteUser(url string, cookies model.Cookies) (string, error) {
+	body, err := config.SendRequestWithErr(http.MethodDelete, url, nil, cookies)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
 // RealmSync - Syncs users and/or groups from the configured LDAP
 // POST /api2/json/access/domains/{realm}/sync
 // ! Not used
-func RealmSync(cookies model.Cookies) error {
-	data := url.Values{}
-	data.Set("scope", "both")
-	url := config.GetURL("/api2/json/access/domains/IAM-CE/sync")
-	info, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
-	if err != nil {
-		return err
-	}
-	log.Println(string(info))
-	return nil
-}
+// func RealmSync(cookies model.Cookies) error {
+// 	data := url.Values{}
+// 	data.Set("scope", "both")
+// 	url := config.GetURL("/api2/json/access/domains/IAM-CE/sync")
+// 	info, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	log.Println(string(info))
+// 	return nil
+// }

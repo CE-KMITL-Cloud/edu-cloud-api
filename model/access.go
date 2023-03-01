@@ -30,3 +30,16 @@ type Cookies struct {
 	Cookie              http.Cookie
 	CSRFPreventionToken fiber.Cookie
 }
+
+// CreateUserBody - struct for create user body in proxmox
+type CreateUserBody struct {
+	UserID   string `form:"userid"`
+	Password string `form:"password"`
+	Groups   string `form:"groups"`
+}
+
+// UpdateUserBody - struct for update user body in proxmox
+type UpdateUserBody struct {
+	Enable string `form:"enable"`
+	Groups string `form:"groups"`
+}

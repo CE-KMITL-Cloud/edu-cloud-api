@@ -32,7 +32,7 @@ func ConnectDb() {
 		log.Fatal("Failed to connect to database. \n", err)
 	}
 
-	log.Println("connected")
+	log.Println("Connected to Database successfully.")
 	db.Logger = logger.Default.LogMode(logger.Info)
 	// log.Println("running migrations")
 	// db.AutoMigrate(&model.User{})

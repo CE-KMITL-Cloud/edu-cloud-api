@@ -18,6 +18,9 @@ func SetupRoutes(app *fiber.App) {
 	// Access
 	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
+	access.Post("/user/create", handler.CreateUser)
+	access.Put("/user/:username/update", handler.UpdateUser)
+	access.Delete("/user/:username/delete", handler.DeleteUser)
 
 	// Node
 	node := app.Group("/node")
