@@ -120,8 +120,8 @@ func CheckQmpStatus(node, vmid string, statuses []string, lock bool, timeout, sl
 func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 	log.Println("Checking delete status ...")
 
-	// Timeout - Default set to 10 mins
-	timeoutCh := time.After(10 * time.Minute)
+	// Timeout - Default set to 1 min
+	timeoutCh := time.After(time.Minute)
 	for {
 		select {
 		case <-timeoutCh:
@@ -167,8 +167,8 @@ func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cookies) bool {
 	log.Println("Checking template status ...")
 
-	// Timeout - Default set to 10 mins
-	timeoutCh := time.After(10 * time.Minute)
+	// Timeout - Default set to 1 min
+	timeoutCh := time.After(time.Minute)
 
 	for {
 		select {

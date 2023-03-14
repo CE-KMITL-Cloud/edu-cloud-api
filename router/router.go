@@ -15,16 +15,25 @@ func SetupRoutes(app *fiber.App) {
 	// realm := app.Group("/realm")
 	// realm.Post("/sync", handler.RealmSync) // ! Not use
 
+	// DB's User
+	user := app.Group("user")
+	user.Delete(":username/delete", handler.DeleteUserDB) // delete user, user's limit in DB
+	// user.Put(":username/update")    // update user in DB
+
+	// DB's Instance
+	instance := app.Group("instance")
+	instance.Delete(":vmid/delete", handler.DeleteInstanceDB)
+
 	// Access
 	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
-	access.Post("/user/create", handler.CreateUser)
-	access.Put("/user/:username/update", handler.UpdateUser)
-	access.Delete("/user/:username/delete", handler.DeleteUser)
+	access.Post("/user/create", handler.CreateUser)             // create user in Proxmox
+	access.Put("/user/:username/update", handler.UpdateUser)    // update user in Proxmox
+	access.Delete("/user/:username/delete", handler.DeleteUser) // delete user in Proxmox
 
 	// Node
 	node := app.Group("/node")
-	node.Get(":node/vm/list", handler.GetVMListByNode)
+	// node.Get(":node/vm/list", handler.GetVMListByNode) // * to be deprecated
 	node.Get(":node/vm/:vmid", handler.GetVM)
 
 	// VM

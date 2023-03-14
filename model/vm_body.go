@@ -3,19 +3,21 @@ package model
 
 // CloneBody - struct for request Cloning VM
 type CloneBody struct {
-	NewID uint64 `form:"newid"`
-	Name  string `form:"name"`
+	Name    string `form:"name"`
+	Storage string `form:"storage"` // Storage name - {"ceph-vm, ceph-vm2 ..."}
+	CIUser  string `form:"ciuser"`
+	CIPass  string `form:"cipassword"`
 }
 
 // CreateBody - struct for request Creating VM
 type CreateBody struct {
-	VMID    uint64  `form:"vmid"`
 	Name    string  `form:"name"`
 	Memory  uint64  `form:"memory"`
 	Sockets uint64  `form:"sockets"`
 	Cores   float64 `form:"cores"`
-	Onboot  uint8   `form:"onboot"` // {0, 1}
-	SCSI0   string  `form:"scsi0"`
+	Onboot  uint8   `form:"onboot"`  // {0, 1}
+	Storage string  `form:"storage"` // Storage name - {"ceph-vm, ceph-vm2 ..."}
+	Disk    string  `form:"disk"`    // Amount of Disk in GiB
 	CDROM   string  `form:"cdrom"`
 	Net0    string  `form:"net0"`
 	SCSIHW  string  `form:"scsihw"`

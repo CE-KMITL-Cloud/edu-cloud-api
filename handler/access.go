@@ -61,7 +61,7 @@ func GetTicket(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Getting ticket from user %s successfully", body.Username)})
 }
 
-// CreateUser - Create new user
+// CreateUser - Create new user in Proxmox
 // POST /api2/json/access/users
 /*
 	using Request's Body
@@ -94,7 +94,7 @@ func CreateUser(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Creating user %s successfully", body.UserID)})
 }
 
-// UpdateUser - Update user detail
+// UpdateUser - Update user detail in Proxmox
 // PUT /api2/json/access/users/{userid}
 /*
 	using Params
@@ -131,7 +131,7 @@ func UpdateUser(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Updating user %s successfully", username)})
 }
 
-// DeleteUser - Delete user
+// DeleteUser - Delete user in Proxmox
 // DELETE /api2/json/access/users/{userid}
 /*
 	using Params

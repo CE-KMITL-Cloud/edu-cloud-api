@@ -22,8 +22,19 @@ const (
 	URL_ENCODED = "application/x-www-form-urlencoded"
 	Gigabyte    = 1073741824 // Gigabyte : 1024^3
 	Megabyte    = 1048576    // Megabyte : 1024^2
+	Byte        = 1024       // Byte : 1024^1
 	MatchNumber = `:(\d+)`
 	WorkerNode  = `work-[-]?\d[\d,]*[\.]?[\d{2}]*`
+
+	// Create VM's Configuration
+	SCSIHW = "virtio-scsi-pci"
+	NET0   = "virtio,bridge=vmbr0,firewall=1"
+	SOCKET = 1
+	ONBOOT = 1
+
+	// DBs
+	ADMIN   = "admin"
+	STUDENT = "student"
 )
 
 // GBtoByte - Converter from GB to Byte
@@ -31,9 +42,24 @@ func GBtoByte(input uint64) uint64 {
 	return input * Gigabyte
 }
 
+// GBtoByteFloat - Converter from GB to Byte Float
+func GBtoByteFloat(input float64) uint64 {
+	return uint64(input * Gigabyte)
+}
+
+// BytetoGB - Converter from Byte to GB
+func BytetoGB(input uint64) float64 {
+	return float64(input) / Gigabyte
+}
+
 // MBtoByte - Converter from MB to Byte
 func MBtoByte(input uint64) uint64 {
 	return input * Megabyte
+}
+
+// MBtoGB - Converter from MB to GB
+func MBtoGB(input uint64) float64 {
+	return float64(input / Byte)
 }
 
 // GreaterOrEqual - Compare sets of VM spec {cpu, mem (byte), disk (byte)}
@@ -55,17 +81,6 @@ func GreaterOrEqual(cpuA, cpuB float64, memA, memB uint64, diskA, diskB uint64) 
 func GetFromENV(item string) string {
 	godotenv.Load(".env")
 	return os.Getenv(item)
-}
-
-// GetListFromENV - get item list from .env
-func GetListFromENV(item []string) []string {
-	godotenv.Load(".env")
-	var list []string
-	for i := 0; i < len(item); i++ {
-		value := os.Getenv(item[i])
-		list = append(list, value)
-	}
-	return list
 }
 
 // GetURL - Constructing Proxmox's API URL
