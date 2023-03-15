@@ -15,7 +15,7 @@ import (
 
 // CheckStatus - for checking status of any process from given VM
 func CheckStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
-	log.Println("Checking VM status ...")
+	log.Printf("Checking VM status on %s in %s ...", vmid, node)
 	timeoutCh := time.After(timeout)
 	for {
 		select {

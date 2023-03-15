@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/edu-cloud-api/config"
+	"github.com/edu-cloud-api/database"
 	"github.com/edu-cloud-api/internal/qemu"
 	"github.com/edu-cloud-api/model"
 	"github.com/gofiber/fiber/v2"
@@ -20,6 +21,9 @@ import (
 	using Request's Body
 	@node : node's name
 	@vmid : VM's ID
+
+	using Query
+	@username : account's username
 */
 func StartVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -29,7 +33,14 @@ func StartVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to start VM's body"})
 	}
 	vmid := fmt.Sprint(startBody.VMID)
-
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
 	cookies := config.GetCookies(c)
 
 	// Getting VM's info
@@ -70,6 +81,9 @@ func StartVM(c *fiber.Ctx) error {
 	using Request's Body
 	@node : node's name
 	@vmid : VM's ID
+
+	using Query
+	@username : account's username
 */
 func StopVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -79,7 +93,14 @@ func StopVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to stop VM's body"})
 	}
 	vmid := fmt.Sprint(stopBody.VMID)
-
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
 	cookies := config.GetCookies(c)
 
 	// Getting VM's info
@@ -121,6 +142,9 @@ func StopVM(c *fiber.Ctx) error {
 	using Request's Body
 	@node : node's name
 	@vmid : VM's ID
+
+	using Query
+	@username : account's username
 */
 func ShutdownVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -134,7 +158,14 @@ func ShutdownVM(c *fiber.Ctx) error {
 	// Construct payload
 	data := url.Values{}
 	data.Set("forceStop", "1") // ! Fixed to set "1" for waiting until VM stopped
-
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
 	cookies := config.GetCookies(c)
 
 	// Getting VM's info
@@ -175,6 +206,9 @@ func ShutdownVM(c *fiber.Ctx) error {
 	using Request's Body
 	@node : node's name
 	@vmid : VM's ID
+
+	using Query
+	@username : account's username
 */
 func SuspendVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -184,7 +218,14 @@ func SuspendVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to suspend VM's body"})
 	}
 	vmid := fmt.Sprint(suspendBody.VMID)
-
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
 	cookies := config.GetCookies(c)
 
 	// Getting VM's info
@@ -225,6 +266,9 @@ func SuspendVM(c *fiber.Ctx) error {
 	using Request's Body
 	@node : node's name
 	@vmid : VM's ID
+
+	using Query
+	@username : account's username
 */
 func ResumeVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -234,7 +278,14 @@ func ResumeVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to resume VM's body"})
 	}
 	vmid := fmt.Sprint(resumeBody.VMID)
-
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
 	cookies := config.GetCookies(c)
 
 	// Getting VM's info
@@ -275,6 +326,9 @@ func ResumeVM(c *fiber.Ctx) error {
 	using Request's Body
 	@node : node's name
 	@vmid : VM's ID
+
+	using Query
+	@username : account's username
 */
 func ResetVM(c *fiber.Ctx) error {
 	// Getting request's body
@@ -284,7 +338,14 @@ func ResetVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to reset VM's body"})
 	}
 	vmid := fmt.Sprint(resetBody.VMID)
-
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
 	cookies := config.GetCookies(c)
 
 	// Getting VM's info

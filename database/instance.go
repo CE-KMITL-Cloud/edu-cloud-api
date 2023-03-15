@@ -173,7 +173,6 @@ func TemplateInstance(vmid string) error {
 }
 
 // ResizeDisk - update column `max_disk` according to template's max_disk in GiB
-// todo : test
 func ResizeDisk(vmid string, maxDisk float64) error {
 	db := ConnectDb()
 	if err := db.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("max_disk", maxDisk).Error; err != nil {
@@ -249,7 +248,7 @@ func CheckInstanceLimit(username string, vmSpec model.VMSpec) (bool, error) {
 	}
 	log.Println("limit instance count :", limit.MaxInstance)
 	log.Println("own instance count :", instanceCount)
-	if instanceCount > int64(limit.MaxInstance) {
+	if instanceCount >= int64(limit.MaxInstance) {
 		log.Println("Error: Maximum instance has reached")
 		return false, errors.New("error: maximum instance has reached")
 	}

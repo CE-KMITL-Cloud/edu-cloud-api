@@ -115,8 +115,6 @@ func GetVMList(c *fiber.Ctx) error {
 	@storage : ceph-vm
 	@disk : 32 (Amount of disk in GiB)
 	@cdrom : "cephfs:iso/ubuntu-20.04.4-live-server-amd64.iso" // todo : list of iso file
-	todo : ciuser
-	todo : cipassword
 
 	using Query
 	@username : account's username
@@ -197,6 +195,12 @@ func CreateVM(c *fiber.Ctx) error {
 		}
 	}
 
+	// Creating VM in DB
+	if _, createInstanceErr := database.CreateInstance(vmid, username, target, createBody.Name, vmSpec); createInstanceErr != nil {
+		log.Printf("Error: Could not create VMID : %s in %s due to %s", vmid, target, createInstanceErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", vmid, createInstanceErr)})
+	}
+
 	// Creating VM in Proxmox
 	vmCreateURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", target))
 	log.Printf("Creating VMID : %s in %s", vmid, target)
@@ -207,15 +211,9 @@ func CreateVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until creating process has been complete
-	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (10 * time.Minute), time.Second, cookies)
+	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (time.Minute), time.Second, cookies)
 	if created {
 		log.Printf("Finished creating VMID : %s in %s", vmid, target)
-
-		// Creating VM in DB
-		if _, createInstanceErr := database.CreateInstance(vmid, username, target, createBody.Name, vmSpec); createInstanceErr != nil {
-			log.Printf("Error: Could not create VMID : %s in %s due to %s", vmid, target, createInstanceErr)
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", vmid, createInstanceErr)})
-		}
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Creating new VMID: %s successfully", vmid)})
 	}
 	log.Printf("Error: Could not create VMID : %s in %s", vmid, target)
@@ -306,8 +304,6 @@ func DeleteVM(c *fiber.Ctx) error {
 	@ciuser : cloudinit's username
 	@cipassword : cloudinit's password
 */
-// todo : config ciuser, cipassword of cloned VM then update cloudinit config drive []
-// todo : check is template is system's sizing then resize disk to requested sizing's []
 // todo : clone from sizing template [checked], ! clone from own's template [checked], ! clone from vm (false) [checked], ! clone from other's template (false) [checked]
 // todo : admin clone vm [checked], admin clone other template [checked]
 func CloneVM(c *fiber.Ctx) error {
@@ -392,10 +388,13 @@ func CloneVM(c *fiber.Ctx) error {
 		data.Set("name", cloneBody.Name)
 		data.Set("target", target)
 		data.Set("full", "1") // ! fixed to `1` for full clone
-		// todo : after cloned -> config ci user, pass using config api
-		// data.Set("ciuser", cloneBody.CIUser)
-		// data.Set("cipassword", cloneBody.CIPass)
 		log.Println("clone body :", data)
+
+		// Creating VM in DB
+		if _, createInstanceErr := database.CreateInstance(newid, username, target, cloneBody.Name, vmSpec); createInstanceErr != nil {
+			log.Printf("Error: Could not create VMID : %s in %s due to %s", newid, target, createInstanceErr)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", newid, createInstanceErr)})
+		}
 
 		// Cloning VM in Proxmox
 		log.Printf("Cloning VMID : %s in %s", newid, target)
@@ -406,29 +405,14 @@ func CloneVM(c *fiber.Ctx) error {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed cloning VMID : %s due to %s", vmid, cloneErr)})
 		}
 
-		// Creating VM in DB
-		if _, createInstanceErr := database.CreateInstance(newid, username, target, cloneBody.Name, vmSpec); createInstanceErr != nil {
-			log.Printf("Error: Could not create VMID : %s in %s due to %s", newid, target, createInstanceErr)
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", newid, createInstanceErr)})
-		}
 		// Waiting until cloning process has been completed
-		cloned := qemu.CheckStatus(target, newid, []string{"created", "starting", "running"}, true, (time.Minute), time.Second, cookies)
+		cloned := qemu.CheckStatus(target, newid, []string{"created", "stopped", "running"}, false, (time.Minute), time.Second, cookies)
 		if cloned {
-			log.Printf("Finished cloning VMID : %s in %s", newid, target)
-
-			// call regenerate cloudinit
-			regenerateURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/cloudinit", node, vmid))
-			_, regenerateErr := qemu.RegenerateCloudinit(regenerateURL, cookies)
-			if regenerateErr != nil {
-				log.Printf("Error: regenerate cloudinit of VMID : %s in %s : %s", vmid, node, regenerateErr)
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed regenerate cloudinit of VMID : %s due to %s", vmid, regenerateErr)})
-			}
-
 			// resize disk to sizing template's disk in DB
 			if isSizingTemplate {
 				log.Printf("Resizing VMID : %s in %s", newid, target)
 				sizing, _ := database.GetTemplate(vmid)
-				sizingDiskByte := config.GBtoByteFloat(sizing.MaxDisk)
+				sizingDiskByte := config.GBtoByteFloat(sizing.MaxDisk) - vm.Info.MaxDisk
 				sizingDisk := fmt.Sprint(`+`, sizingDiskByte)
 
 				resizeData := url.Values{}
@@ -437,20 +421,34 @@ func CloneVM(c *fiber.Ctx) error {
 				log.Println("resize data:", resizeData)
 
 				// Resizing Disk in Proxmox
-				resizeDiskURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/resize", node, vmid))
+				resizeDiskURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/resize", target, newid))
 				_, resizeInfoErr := qemu.ResizeDisk(resizeDiskURL, resizeData, cookies)
 				if resizeInfoErr != nil {
-					log.Printf("Error: resizing disk of VMID : %s in %s : %s", vmid, node, resizeInfoErr)
-					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed resizing disk of VMID : %s due to %s", vmid, resizeInfoErr)})
+					log.Printf("Error: resizing disk of VMID : %s in %s : %s", newid, target, resizeInfoErr)
+					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed resizing disk of VMID : %s due to %s", newid, resizeInfoErr)})
 				}
 
 				// Resizing Disk in DB
 				resizeErr := database.ResizeDisk(newid, sizing.MaxDisk)
 				if resizeErr != nil {
-					log.Printf("Error: resizing disk of VMID : %s in DB : %s", vmid, resizeErr)
-					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed resizing disk of VMID : %s in DB due to %s", vmid, resizeErr)})
+					log.Printf("Error: resizing disk of VMID : %s in DB : %s", newid, resizeErr)
+					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed resizing disk of VMID : %s in DB due to %s", newid, resizeErr)})
 				}
 			}
+			// config ciuser, cipassword
+			editData := url.Values{}
+			editData.Set("ciuser", cloneBody.CIUser)
+			editData.Set("cipassword", cloneBody.CIPass)
+			log.Println("edit body :", editData)
+
+			log.Printf("Editing VMID : %s in %s", newid, target)
+			vmEditURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/config", target, newid))
+			_, editErr := qemu.EditVM(vmEditURL, editData, cookies)
+			if editErr != nil {
+				log.Printf("Error: editing VMID : %s in %s : %s", newid, target, editErr)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed editing VMID : %s in %s due to %s", newid, target, editErr)})
+			}
+			log.Printf("Finished cloning VMID : %s in %s", newid, target)
 			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Cloning new VMID: %s successfully", newid)})
 		}
 		log.Printf("Error: cloning VMID : %s in %s has failed", newid, target)
