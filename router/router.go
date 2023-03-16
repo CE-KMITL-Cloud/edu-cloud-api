@@ -13,7 +13,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Realm
 	// realm := app.Group("/realm")
-	// realm.Post("/sync", handler.RealmSync) // ! Not use
+	// realm.Post("/sync", handler.RealmSync) // ! deprecated
 
 	// DB's User
 	user := app.Group("user")
@@ -62,6 +62,7 @@ func SetupRoutes(app *fiber.App) {
 	// Storage
 	storage := cluster.Group("storage")
 	storage.Get("/list", handler.GetStorageList)
+	storage.Get("/iso/list", handler.GetISOList)
 
 	// Node
 	clusterNode := cluster.Group("node")

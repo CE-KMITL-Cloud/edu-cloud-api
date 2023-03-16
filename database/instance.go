@@ -48,7 +48,6 @@ func GetInstance(vmid string) (model.Instance, error) {
 }
 
 // GetAllTemplates - getting all instance templates
-// todo : test
 func GetAllTemplates() ([]model.Sizing, error) {
 	var templates []model.Sizing
 	db := ConnectDb()
@@ -101,7 +100,6 @@ func GetAllInstanceTemplatesByOwner(ownerid string) []model.Instance {
 }
 
 // GetTemplate - getting instance template from given vmid
-// todo : test
 func GetTemplate(vmid string) (model.Sizing, error) {
 	var template model.Sizing
 	db := ConnectDb()

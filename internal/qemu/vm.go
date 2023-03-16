@@ -152,11 +152,6 @@ func GetTemplateList(cookies model.Cookies) ([]model.VMsInfo, error) {
 	action : { start, stop, suspend, shutdown, resume, reset }
 */
 func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
-	// TODO: should return only user's VM
-	// user := model.User{}
-	// database.DB.Db.Find(&user, "username = ?", username)
-	// log.Println(user)
-
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {

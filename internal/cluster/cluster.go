@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/model"
@@ -95,6 +96,27 @@ func GetStorageList(cookies model.Cookies) ([]string, error) {
 	}
 	log.Println(storages)
 	return storages, nil
+}
+
+// GetISOList - Getting ISO file list
+// GET /api2/json/nodes/{node}/storage/{storage}/content
+func GetISOList(cookies model.Cookies) ([]string, error) {
+	log.Println("Getting ISO file list from cluster's resources ...")
+	url := config.GetURL("/api2/json/nodes/ops1/storage/cephfs/content")
+	storageContent := model.ISOList{}
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
+	if err != nil {
+		return []string{}, err
+	}
+	if marshalErr := json.Unmarshal(body, &storageContent); marshalErr != nil {
+		return []string{}, marshalErr
+	}
+	var ISOList []string
+	for _, iso := range storageContent.ISOList {
+		ISOList = append(ISOList, strings.TrimPrefix(iso.Volid, config.ISO))
+	}
+	log.Println(ISOList)
+	return ISOList, nil
 }
 
 // GetNode - Getting node information from given name

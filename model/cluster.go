@@ -65,3 +65,17 @@ type VMsInfo struct {
 	Status   string  `json:"status"`
 	MaxCPU   float64 `json:"maxcpu"`
 }
+
+// ISOList - ISO list
+type ISOList struct {
+	ISOList []ISOInfo `json:"data"`
+}
+
+// ISOInfo - ISO info
+type ISOInfo struct {
+	Content string `json:"content"`
+	Volid   string `json:"volid"` // "cephfs:iso/ubuntu-20.04.4-live-server-amd64.iso"
+	Size    uint64 `json:"size"`
+	Format  string `json:"format"`
+	CTime   uint64 `json:"ctime"`
+}

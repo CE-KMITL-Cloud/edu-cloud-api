@@ -29,6 +29,7 @@ const (
 	// Create VM's Configuration
 	SCSIHW = "virtio-scsi-pci"
 	NET0   = "virtio,bridge=vmbr0,firewall=1"
+	ISO    = "cephfs:iso/"
 	SOCKET = 1
 	ONBOOT = 1
 

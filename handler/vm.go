@@ -17,7 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// GetVM - Getting specific VM's info from Proxmox ✅
+// GetVM - Getting specific VM's info from Proxmox
 // GET /api2/json/nodes/{node}/qemu/{vmid}/status/current
 /*
 	using Params
@@ -56,7 +56,7 @@ func GetVM(c *fiber.Ctx) error {
 	using Params
 	@node : node's name
 */
-// * this function might never be used. to be deprecated
+// ! this function might never be used. to be deprecated
 func GetVMListByNode(c *fiber.Ctx) error {
 	node := c.Params("node")
 
@@ -72,7 +72,7 @@ func GetVMListByNode(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": vmList})
 }
 
-// GetVMList - Getting VM list (VM Template not included) ✅
+// GetVMList - Getting VM list (VM Template not included)
 // GET /api2/json/cluster/resources
 /*
 	using Query
@@ -104,7 +104,7 @@ func GetVMList(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": returnList})
 }
 
-// CreateVM - Create VM on specific node ✅
+// CreateVM - Create VM on specific node
 // POST /api2/json/nodes/{node}/qemu
 /*
 	using Request's Body
@@ -114,7 +114,7 @@ func GetVMList(c *fiber.Ctx) error {
 	@cores : 2 (cores)
 	@storage : ceph-vm
 	@disk : 32 (Amount of disk in GiB)
-	@cdrom : "cephfs:iso/ubuntu-20.04.4-live-server-amd64.iso" // todo : list of iso file
+	@cdrom : "cephfs:iso/" + "ubuntu-20.04.4-live-server-amd64.iso"
 
 	using Query
 	@username : account's username
@@ -143,6 +143,7 @@ func CreateVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting vmid due to %s", getVMIDErr)})
 	}
 	scsi0 := fmt.Sprintf("%s:%s", createBody.Storage, createBody.Disk)
+	cdrom := config.ISO + createBody.CDROM
 
 	// Construct payload
 	data := url.Values{}
@@ -153,7 +154,7 @@ func CreateVM(c *fiber.Ctx) error {
 	data.Set("sockets", fmt.Sprint(config.SOCKET))
 	data.Set("onboot", fmt.Sprint(config.ONBOOT))
 	data.Set("scsi0", scsi0) // "ceph-vm:32"
-	data.Set("cdrom", createBody.CDROM)
+	data.Set("cdrom", cdrom)
 	data.Set("net0", config.NET0)
 	data.Set("scsihw", config.SCSIHW)
 
@@ -220,7 +221,7 @@ func CreateVM(c *fiber.Ctx) error {
 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed", vmid)})
 }
 
-// DeleteVM - Deleting specific VM ✅
+// DeleteVM - Deleting specific VM
 // DELETE /api2/json/nodes/{node}/qemu/{vmid}
 /*
 	using Request's Body
@@ -289,7 +290,7 @@ func DeleteVM(c *fiber.Ctx) error {
 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Target VMID: %s hasn't been deleted", vmid)})
 }
 
-// CloneVM - Cloning specific VM 👾
+// CloneVM - Cloning specific VM
 // POST /api2/json/nodes/{node}/qemu/{vmid}}/clone
 /*
 	using Query Params
@@ -304,8 +305,6 @@ func DeleteVM(c *fiber.Ctx) error {
 	@ciuser : cloudinit's username
 	@cipassword : cloudinit's password
 */
-// todo : clone from sizing template [checked], ! clone from own's template [checked], ! clone from vm (false) [checked], ! clone from other's template (false) [checked]
-// todo : admin clone vm [checked], admin clone other template [checked]
 func CloneVM(c *fiber.Ctx) error {
 	// Getting request's body
 	cloneBody := new(model.CloneBody)
@@ -468,7 +467,6 @@ func CloneVM(c *fiber.Ctx) error {
 	using Query
 	@username : account's username
 */
-// todo : create from own's vm [checked], ! create from other's vm (false) [checked], admin create [checked], student cannot create [checked]
 func CreateTemplate(c *fiber.Ctx) error {
 	// Getting request's body
 	templateBody := new(model.TemplateBody)

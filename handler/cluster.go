@@ -37,3 +37,16 @@ func GetStorageList(c *fiber.Ctx) error {
 	}
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": storageList})
 }
+
+// GetISOList - Getting cephfs storage's iso file list
+// GET /api2/json/nodes/{node}/storage/{storage}/content
+func GetISOList(c *fiber.Ctx) error {
+	cookies := config.GetCookies(c)
+	log.Println("Getting ISO file list")
+	ISOList, err := cluster.GetISOList(cookies)
+	if err != nil {
+		log.Println("Error: from getting ISO file list :", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting ISO file list due to %s", err)})
+	}
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": ISOList})
+}
