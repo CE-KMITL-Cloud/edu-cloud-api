@@ -25,6 +25,7 @@ const (
 	Byte        = 1024       // Byte : 1024^1
 	MatchNumber = `:(\d+)`
 	WorkerNode  = `work-[-]?\d[\d,]*[\.]?[\d{2}]*`
+	ENV_PATH    = ".env"
 
 	// Create VM's Configuration
 	SCSIHW = "virtio-scsi-pci"
@@ -36,6 +37,7 @@ const (
 	// DBs
 	ADMIN   = "admin"
 	STUDENT = "student"
+	FACULTY = "faculty"
 )
 
 // GBtoByte - Converter from GB to Byte
@@ -80,7 +82,7 @@ func GreaterOrEqual(cpuA, cpuB float64, memA, memB uint64, diskA, diskB uint64) 
 
 // GetFromENV - get item from .env
 func GetFromENV(item string) string {
-	godotenv.Load(".env")
+	godotenv.Load(ENV_PATH)
 	return os.Getenv(item)
 }
 

@@ -47,30 +47,6 @@ func GetInstance(vmid string) (model.Instance, error) {
 	return instance, nil
 }
 
-// GetAllTemplates - getting all instance templates
-func GetAllTemplates() ([]model.Sizing, error) {
-	var templates []model.Sizing
-	db := ConnectDb()
-	db.Table("template").Find(&templates)
-	if len(templates) == 0 {
-		log.Println("Error: Could not get instance templates list")
-		return templates, errors.New("error: unable to list instance templates")
-	}
-	return templates, nil
-}
-
-// GetAllTemplatesID - getting all instance templates's ID
-func GetAllTemplatesID() ([]string, error) {
-	var templates []string
-	db := ConnectDb()
-	db.Table("template").Select("vmid").Find(&templates)
-	if len(templates) == 0 {
-		log.Println("Error: Could not get instance templates's ID list")
-		return templates, errors.New("error: unable to list instances templates's ID")
-	}
-	return templates, nil
-}
-
 // GetInstanceTemplate - getting instance template from given vmid
 func GetInstanceTemplate(vmid string) (model.Instance, error) {
 	var instance model.Instance
@@ -215,67 +191,4 @@ func CheckInstanceTemplateOwner(username, vmid string) (bool, error) {
 		return false, fmt.Errorf("user is not owner of the given VM : %s", vmid)
 	}
 	return true, nil
-}
-
-// IsSizingTemplate - check vm's ID that are in templates preset
-func IsSizingTemplate(vmid string) (bool, error) {
-	_, getTemplateErr := GetTemplate(vmid)
-	if getTemplateErr != nil {
-		return false, getTemplateErr
-	}
-	return true, nil
-}
-
-// CheckInstanceLimit - check has instance limit reached already? and return boolean
-func CheckInstanceLimit(username string, vmSpec model.VMSpec) (bool, error) {
-	db := ConnectDb()
-	var (
-		sumCPU, remainCPU                                           float64
-		limitRAM, limitDisk, sumRAM, sumDisk, remainRAM, remainDisk uint64
-	)
-	limit, err := GetInstanceLimit(username)
-	if err != nil {
-		return false, fmt.Errorf("error: could not get instance limit due to %s", err)
-	}
-	limitRAM, limitDisk = config.GBtoByteFloat(limit.MaxRAM), config.GBtoByteFloat(limit.MaxDisk)
-	// check instance count
-	var instanceCount int64
-	if countErr := db.Table("instance").Where("ownerid = ?", username).Count(&instanceCount).Error; countErr != nil {
-		log.Println("Error: Could not count instance due to", countErr)
-		return false, fmt.Errorf("error: could not count instance due to %s", countErr)
-	}
-	log.Println("limit instance count :", limit.MaxInstance)
-	log.Println("own instance count :", instanceCount)
-	if instanceCount >= int64(limit.MaxInstance) {
-		log.Println("Error: Maximum instance has reached")
-		return false, errors.New("error: maximum instance has reached")
-	}
-
-	// sum spec from all instance user have and store as sumCPU, sumRAM, sumDisk then compare with limit
-	if instanceCount > 0 {
-		instances, instancesErr := GetAllInstancesByOwner(username)
-		log.Println("all instances :", instances)
-		if instancesErr != nil {
-			log.Println("Error: Could not get instances due to", instancesErr)
-			return false, fmt.Errorf("error: could not get instances due to %s", instancesErr)
-		}
-		for _, instance := range instances {
-			sumCPU += instance.MaxCPU
-			sumRAM += config.GBtoByteFloat(instance.MaxRAM)
-			sumDisk += config.GBtoByteFloat(instance.MaxDisk)
-		}
-	}
-	log.Printf("limit = cpu : %f, ram : %d, disk : %d", limit.MaxCPU, limitRAM, limitDisk)
-	log.Printf("own spec = cpu : %f, ram : %d, disk : %d", sumCPU, sumRAM, sumDisk)
-	if limitRAM > sumRAM && limit.MaxCPU > sumCPU && limitDisk > sumDisk {
-		log.Println("have sufficient spec for creating VM, check spec of request's vm and remaining limit")
-		remainCPU, remainRAM, remainDisk = limit.MaxCPU-sumCPU, limitRAM-sumRAM, limitDisk-sumDisk
-		log.Printf("remaining limit = cpu : %f, ram : %d, disk : %d", remainCPU, remainRAM, remainDisk)
-		log.Printf("VM spec = cpu : %f, ram : %d, disk : %d", vmSpec.CPU, vmSpec.Memory, vmSpec.Disk)
-		if remainCPU > vmSpec.CPU && remainRAM > vmSpec.Memory && remainDisk > vmSpec.Disk {
-			log.Println("able to create VM :D")
-			return true, nil
-		}
-	}
-	return false, errors.New("error: maximum instance limit has reached")
 }

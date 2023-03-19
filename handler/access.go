@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/edu-cloud-api/config"
+	"github.com/edu-cloud-api/database"
 	"github.com/edu-cloud-api/internal/access"
 	"github.com/edu-cloud-api/model"
 	"github.com/gofiber/fiber/v2"
@@ -144,7 +145,30 @@ func DeleteUser(c *fiber.Ctx) error {
 	userid := fmt.Sprintf("%s%s", username, config.REALM)
 	deleteURL := config.GetURL(fmt.Sprintf("/api2/json/access/users/%s", userid))
 
-	// Creating User
+	// Getting user's group
+	group, getGroupErr := database.GetUserGroup(username)
+	if getGroupErr != nil {
+		log.Println("Error: Could not get user's group due to :", getGroupErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting user's group due to %s", getGroupErr)})
+	}
+
+	// Deleting User in DB
+	log.Printf("Deleting user : %s", username)
+	err := database.DeleteUserDB(username, group)
+	if err != nil {
+		log.Println("Error: Could not delete user in DB due to :", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting user : %s due to %s", username, err)})
+	}
+
+	// Deleting instance limit
+	log.Printf("Deleting user's instance limit : %s", username)
+	deleteLimitErr := database.DeleteInstanceLimit(username)
+	if deleteLimitErr != nil {
+		log.Println("Error: Could not delete user's instance limit in DB due to :", deleteLimitErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting user's instance limit : %s due to %s", username, deleteLimitErr)})
+	}
+
+	// Deleting User in Proxmox
 	log.Printf("Deleting user : %s", username)
 	_, deleteErr := access.DeleteUser(deleteURL, cookies)
 	if deleteErr != nil {
@@ -153,16 +177,3 @@ func DeleteUser(c *fiber.Ctx) error {
 	}
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Deleting user %s successfully", username)})
 }
-
-// RealmSync - Syncs users and/or groups from the configured LDAP
-// ! Not use
-// func RealmSync(c *fiber.Ctx) error {
-// 	cookies := config.GetCookies(c)
-// 	log.Println("Realm sync started ...")
-// 	err := access.RealmSync(cookies)
-// 	if err != nil {
-// 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed realm syncing due to %s", err)})
-// 	}
-// 	log.Println("Realm sync finished successfully")
-// 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": "Realm sync finished successfully"})
-// }
