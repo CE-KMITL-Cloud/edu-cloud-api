@@ -108,7 +108,6 @@ func GetVMList(c *fiber.Ctx) error {
 // POST /api2/json/nodes/{node}/qemu
 /*
 	using Request's Body
-	@vmid : VM's ID
 	@name : VM's name
 	@memory : 1024 (MB)
 	@cores : 2 (cores)
@@ -214,6 +213,8 @@ func CreateVM(c *fiber.Ctx) error {
 	// Waiting until creating process has been complete
 	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (time.Minute), time.Second, cookies)
 	if created {
+		// todo : pull mac addr
+		// todo : insert into proxy table
 		log.Printf("Finished creating VMID : %s in %s", vmid, target)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Creating new VMID: %s successfully", vmid)})
 	}
@@ -447,6 +448,8 @@ func CloneVM(c *fiber.Ctx) error {
 				log.Printf("Error: editing VMID : %s in %s : %s", newid, target, editErr)
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed editing VMID : %s in %s due to %s", newid, target, editErr)})
 			}
+			// todo : pull mac addr
+			// todo : insert into proxy table
 			log.Printf("Finished cloning VMID : %s in %s", newid, target)
 			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Cloning new VMID: %s successfully", newid)})
 		}
