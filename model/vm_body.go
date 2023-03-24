@@ -83,3 +83,9 @@ type RebootBody struct {
 	VMID uint64 `form:"vmid"`
 	Node string `form:"node"`
 }
+
+// VncProxyBody - struct for request Get VNC Ticket
+type VncProxyBody struct {
+	VMID uint64 `form:"vmid"`
+	Node string `form:"node"`
+}

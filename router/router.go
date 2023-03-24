@@ -46,6 +46,9 @@ func SetupRoutes(app *fiber.App) {
 	vm.Post("/template", handler.CreateTemplate)
 	vm.Post("/edit", handler.EditVM)
 
+	// VNC
+	vm.Post("/vncproxy", handler.GetVncTicket)
+
 	// VM Power Management
 	status := vm.Group("/status")
 	status.Post("/start", handler.StartVM)

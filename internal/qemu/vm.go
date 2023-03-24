@@ -25,6 +25,19 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	return info, nil
 }
 
+// GetVMConfig - GET /api2/json/nodes/{node}/qemu/{vmid}/config
+func GetVMConfig(url string, cookies model.Cookies) (model.VMConfig, error) {
+	info := model.VMConfig{}
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
+	if err != nil {
+		return info, err
+	}
+	if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
+		return info, marshalErr
+	}
+	return info, nil
+}
+
 // GetVMListByNode - GET /api2/json/nodes/{node}/qemu
 func GetVMListByNode(url string, cookies model.Cookies) (model.VMList, error) {
 	info := model.VMList{}
@@ -167,6 +180,19 @@ func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.
 func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
+	if err != nil {
+		return response, err
+	}
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}
+
+// VncProxy - POST /api2/json/nodes/{node}/qemu/{vmid}/vncproxy
+func VncProxy(url string, cookies model.Cookies) (model.VncProxy, error) {
+	response := model.VncProxy{}
+	body, err := config.SendRequestWithErr(http.MethodPost, url, nil, cookies)
 	if err != nil {
 		return response, err
 	}

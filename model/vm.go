@@ -91,3 +91,43 @@ type VMTemplateInfo struct {
 	QmpStatus string  `json:"qmpstatus"`
 	HA        HA      `json:"ha"`
 }
+
+// VMConfig - struct for VM config
+type VMConfig struct {
+	Info ConfigDetail `json:"data"`
+}
+
+// ConfigDetail - struct for VM config detail
+type ConfigDetail struct {
+	USB0         string `json:"usb0"`
+	IPConfig0    string `json:"ipconfig0"`
+	NameServer   string `json:"nameserver"`
+	SCSIHW       string `json:"scsihw"`
+	Meta         string `json:"meta"`
+	SCSI0        string `json:"scsi0"`
+	SearchDomain string `json:"searchdomain"`
+	VMGenID      string `json:"vmgenid"`
+	OSType       string `json:"ostype"`
+	Tags         string `json:"tags"`
+	BootDisk     string `json:"bootdisk"`
+	VGA          string `json:"vga"`
+	Net0         string `json:"net0"`
+	Boot         string `json:"boot"`
+	SMBIOS1      string `json:"smbios1"`
+	Digest       string `json:"digest"`
+	Numa         uint64 `json:"numa"`
+	IDE2         string `json:"ide2"`
+	Serial0      string `json:"serial0"`
+	Agent        string `json:"agent"`
+}
+
+// VncProxy - struct for VNC Proxy
+type VncProxy struct {
+	Detail VncProxyResponse `json:"data"`
+}
+
+// VncProxyResponse - struct for VNC Proxy response
+type VncProxyResponse struct {
+	Ticket string `json:"ticket"`
+	Port   string `json:"port"`
+}

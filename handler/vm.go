@@ -709,3 +709,40 @@ func EditVM(c *fiber.Ctx) error {
 	log.Printf("Error: editing VMID : %s in %s due to have no enough free space", vmid, node)
 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": "Node have no enough free space"})
 }
+
+// GetVncTicket - Get VNC Ticket from given VMID
+// POST /api2/json/nodes/{node}/qemu/{vmid}/vncproxy
+/*
+	using Request's Body
+	@node : node's name
+	@vmid : VM's ID
+
+	using Query
+	@username : account's username
+*/
+func GetVncTicket(c *fiber.Ctx) error {
+	// Getting request's body
+	vncProxyBody := new(model.VncProxyBody)
+	if err := c.BodyParser(vncProxyBody); err != nil {
+		log.Println("Error: Could not parse body parser to VNC Proxy body")
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to VNC Proxy body"})
+	}
+	vmid := fmt.Sprint(vncProxyBody.VMID)
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
+	cookies := config.GetCookies(c)
+	getVncTicketURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/vncproxy", vncProxyBody.Node, vmid))
+	ticket, getTicketErr := qemu.VncProxy(getVncTicketURL, cookies)
+	if getTicketErr != nil {
+		log.Printf("Error: getting VNC Proxy ticket from VMID : %s in %s : %s", vmid, vncProxyBody.Node, getTicketErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VNC Proxy ticket from VMID : %s in %s due to %s", vmid, vncProxyBody.Node, getTicketErr)})
+	}
+	log.Printf("Finished getting VNC Proxy ticket from VMID : %s in %s", vmid, vncProxyBody.Node)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": ticket})
+}
