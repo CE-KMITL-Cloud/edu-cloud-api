@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/edu-cloud-api/config"
+	"github.com/edu-cloud-api/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -43,7 +44,32 @@ func ConnectDb() *gorm.DB {
 		log.Fatal("Failed to connect to database. \n", err)
 	}
 	db.Logger = logger.Default.LogMode(logger.Info)
-	// log.Println("running migrations")
-	// db.AutoMigrate(&model.User{})
+
+	// Migrate the schema for each table
+	type TableToMigrate struct {
+		Name   string
+		Schema interface{}
+	}
+	tablesToMigrate := []TableToMigrate{
+		{"admin", &model.User{}},
+		{"student", &model.User{}},
+		{"faculty", &model.User{}},
+		{"instance", &model.Instance{}},
+		{"instance_limit", &model.InstanceLimit{}},
+		{"pool", &model.Pool{}},
+		{"sizing", &model.Sizing{}},
+		// {"proxy", &Proxy{}},
+		// {"proxy_key", &ProxyKey{}},
+	}
+
+	log.Println("running migrations")
+	for _, table := range tablesToMigrate {
+		err := db.Table(table.Name).AutoMigrate(table.Schema)
+		if err != nil {
+			panic(fmt.Sprintf("migration of %s table failed: %v", table.Name, err))
+		}
+	}
+
+	fmt.Println("Database migration completed!")
 	return db
 }

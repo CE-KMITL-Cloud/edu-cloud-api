@@ -111,7 +111,6 @@ func DeleteUserDB(username, group string) error {
 }
 
 // EditUser - edit user by given username, group
-// todo : test
 func EditUser(username, group string, body *model.EditUserDB) error {
 	db := ConnectDb()
 	modifiedUser := model.User{

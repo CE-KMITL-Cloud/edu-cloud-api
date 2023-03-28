@@ -12,7 +12,7 @@ import (
 func GetAllTemplates() ([]model.Sizing, error) {
 	var templates []model.Sizing
 	db := ConnectDb()
-	db.Table("template").Find(&templates)
+	db.Table("sizing").Find(&templates)
 	if len(templates) == 0 {
 		log.Println("Error: Could not get instance templates list")
 		return templates, errors.New("error: unable to list instance templates")
@@ -24,7 +24,7 @@ func GetAllTemplates() ([]model.Sizing, error) {
 func GetAllTemplatesID() ([]string, error) {
 	var templates []string
 	db := ConnectDb()
-	db.Table("template").Select("vmid").Find(&templates)
+	db.Table("sizing").Select("vmid").Find(&templates)
 	if len(templates) == 0 {
 		log.Println("Error: Could not get instance templates's ID list")
 		return templates, errors.New("error: unable to list instances templates's ID")

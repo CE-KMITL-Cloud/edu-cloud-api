@@ -1,9 +1,25 @@
 // Package model - structs
 package model
 
+import (
+	"database/sql/driver"
+
+	"github.com/lib/pq"
+)
+
+type StringArray []string
+
+func (s *StringArray) Scan(src interface{}) error {
+	return pq.Array(s).Scan(src)
+}
+
+func (s StringArray) Value() (driver.Value, error) {
+	return pq.Array(s).Value()
+}
+
 // User - struct for user's info {student, faculty, admin}
 type User struct {
-	Username   string
+	Username   string `gorm:"primaryKey"`
 	Password   string
 	Name       string
 	Status     bool
@@ -29,7 +45,7 @@ type EditUserDB struct {
 
 // InstanceLimit - struct for instance limit
 type InstanceLimit struct {
-	Username    string
+	Username    string  `gorm:"primaryKey"`
 	MaxCPU      float64 // Amount of CPU limit
 	MaxRAM      float64 // Amount of RAM limit in GiB
 	MaxDisk     float64 // Amount of Disk limit in GiB
@@ -46,7 +62,7 @@ type EditInstanceLimit struct {
 
 // Instance - struct for instance's info
 type Instance struct {
-	VMID       string `gorm:"column:vmid"`
+	VMID       string `gorm:"primaryKey;column:vmid"`
 	OwnerID    string `gorm:"column:ownerid"`
 	Node       string
 	Name       string
@@ -70,11 +86,30 @@ type InstanceBody struct {
 
 // Sizing - struct for instance's template
 type Sizing struct {
-	VMID       string `gorm:"column:vmid"`
+	VMID       string `gorm:"primaryKey;column:vmid"`
 	Node       string
 	Name       string
 	MaxCPU     float64 // Amount of CPU limit
 	MaxRAM     float64 // Amount of RAM limit in GiB
 	MaxDisk    float64 // Amount of Disk limit in GiB
 	CreateTime string
+}
+
+// Pool - struct for pool
+type Pool struct {
+	ID         uint64 `gorm:"primaryKey;column:id"`
+	Owner      string
+	Code       string
+	Name       string
+	VMID       pq.StringArray `gorm:"column:vmid;type:text[]"`
+	Member     pq.StringArray `gorm:"type:text[]"`
+	CreateTime string
+	ExpireTime string
+}
+
+// CreatePoolBody - struct for create pool's request body
+type CreatePoolBody struct {
+	Owner string `form:"owner"`
+	Code  string `form:"code"`
+	Name  string `form:"name"`
 }

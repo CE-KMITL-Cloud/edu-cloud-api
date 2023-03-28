@@ -127,7 +127,7 @@ func DeleteInstance(vmid string) error {
 }
 
 // EditInstance - edit instance by given vmid
-func EditInstance(username string, modifiedInstance model.Instance) error {
+func EditInstance(modifiedInstance model.Instance) error {
 	db := ConnectDb()
 	if err := db.Model(&model.Instance{}).Table("instance").Where("vmid = ?", modifiedInstance.VMID).Updates(&modifiedInstance).Error; err != nil {
 		log.Println("Error: Could not update instance :", modifiedInstance.VMID)

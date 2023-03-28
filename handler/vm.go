@@ -133,7 +133,7 @@ func CreateVM(c *fiber.Ctx) error {
 	}
 	if group == config.STUDENT {
 		log.Println("Error: user's group is not allowed to create VM")
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to create VM due to user's group is not allowed to create VM"})
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to create VM due to user's group is not allowed"})
 	}
 	cookies := config.GetCookies(c)
 	vmid, getVMIDErr := qemu.GetVMID(cookies)
@@ -488,7 +488,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 	}
 	if group == config.STUDENT {
 		log.Println("Error: user's group is not allowed to create VM")
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to templating VM due to user's group is not allowed to create VM"})
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to templating VM due to user's group is not allowed"})
 	}
 	// Check that user is owner of given VM
 	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
@@ -692,7 +692,7 @@ func EditVM(c *fiber.Ctx) error {
 			}
 
 			// update vm spec in DB
-			updateErr := database.EditInstance(username, model.Instance{
+			updateErr := database.EditInstance(model.Instance{
 				MaxCPU:  editBody.Cores,
 				MaxRAM:  config.MBtoGB(editBody.Memory),
 				MaxDisk: float64(editBody.Disk),

@@ -23,6 +23,13 @@ func SetupRoutes(app *fiber.App) {
 	user.Get(":username/limit", handler.GetUserLimitDB)
 	user.Put(":username/limit/update", handler.UpdateUserLimitDB)
 
+	// Pool
+	pool := app.Group("pool")
+	pool.Get("/owner/:username", handler.GetPoolsDB)
+	pool.Get(":code/owner/:username", handler.GetPoolDB)
+	pool.Post("/create", handler.CreatePoolDB)
+	pool.Delete(":code/owner/:username", handler.DeletePoolDB)
+
 	// Proxmox's Access
 	access := app.Group("/access")
 	access.Post("/ticket", handler.GetTicket)
