@@ -75,18 +75,6 @@ func GetAllInstanceTemplatesByOwner(ownerid string) []model.Instance {
 	return instances
 }
 
-// GetTemplate - getting instance template from given vmid
-func GetTemplate(vmid string) (model.Sizing, error) {
-	var template model.Sizing
-	db := ConnectDb()
-	db.Table("template").Where("vmid = ?", vmid).Find(&template)
-	if template == (model.Sizing{}) {
-		log.Println("Error: Could not get instance template id :", vmid)
-		return template, fmt.Errorf("error: unable to get instance template id : %s", vmid)
-	}
-	return template, nil
-}
-
 // CreateInstance - creating new instance
 func CreateInstance(vmid, ownerid, node, name string, spec model.VMSpec) (model.Instance, error) {
 	db := ConnectDb()

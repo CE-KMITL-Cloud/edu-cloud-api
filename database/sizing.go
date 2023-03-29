@@ -3,6 +3,7 @@ package database
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/edu-cloud-api/model"
@@ -30,6 +31,18 @@ func GetAllTemplatesID() ([]string, error) {
 		return templates, errors.New("error: unable to list instances templates's ID")
 	}
 	return templates, nil
+}
+
+// GetTemplate - getting instance template from given vmid
+func GetTemplate(vmid string) (model.Sizing, error) {
+	var template model.Sizing
+	db := ConnectDb()
+	db.Table("sizing").Where("vmid = ?", vmid).Find(&template)
+	if template == (model.Sizing{}) {
+		log.Println("Error: Could not get instance template id :", vmid)
+		return template, fmt.Errorf("error: unable to get instance template id : %s", vmid)
+	}
+	return template, nil
 }
 
 // IsSizingTemplate - check vm's ID that are in templates preset
