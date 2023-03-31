@@ -21,8 +21,8 @@ type Token struct {
 
 // Login - struct for authentication to Proxmox
 type Login struct {
-	Username string `form:"username"`
-	Password string `form:"password"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // Cookies - struct for parsing Cookies
@@ -33,13 +33,13 @@ type Cookies struct {
 
 // CreateUserBody - struct for create user body in proxmox
 type CreateUserBody struct {
-	UserID   string `form:"userid"`
-	Password string `form:"password"`
-	Groups   string `form:"groups"`
+	UserID   string `json:"userid"`
+	Password string `json:"password"`
+	Groups   string `json:"groups"`
 }
 
 // UpdateUserBody - struct for update user body in proxmox
 type UpdateUserBody struct {
-	Enable string `form:"enable"`
-	Groups string `form:"groups"`
+	Enable string `json:"enable"`
+	Groups string `json:"groups"`
 }

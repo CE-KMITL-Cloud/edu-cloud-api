@@ -229,3 +229,14 @@ func Contains(s []string, str string) bool {
 	}
 	return false
 }
+
+// FilterList - compare two string list
+func FilterList(list1, list2 []string) []string {
+	filtered := make([]string, 0, len(list1))
+	for _, item := range list1 {
+		if !Contains(list2, item) {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}

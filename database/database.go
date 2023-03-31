@@ -4,6 +4,8 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/model"
@@ -18,6 +20,12 @@ type dsn struct {
 	password string
 	dbname   string
 	port     string
+}
+
+// TableToMigrate - Migrate the schema for each table
+type TableToMigrate struct {
+	Name   string
+	Schema interface{}
 }
 
 // DB - db's global variable
@@ -35,21 +43,25 @@ func GetDSN() string {
 	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", datasource.hostname, datasource.username, datasource.password, datasource.dbname, datasource.port)
 }
 
-// ConnectDb - create connection to db
-func ConnectDb() *gorm.DB {
-	db, err := gorm.Open(postgres.Open(GetDSN()), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+// Initialize - setting logger & running migrations
+func Initialize() {
+	// Set up the logger
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io.Writer
+		logger.Config{
+			SlowThreshold: time.Second,  // Show SQL queries slower than this threshold
+			LogLevel:      logger.Error, // Log only error messages
+			Colorful:      true,         // Use color output
+		},
+	)
+	DB, _ = gorm.Open(postgres.Open(GetDSN()), &gorm.Config{
+		Logger: newLogger,
 	})
-	if err != nil {
-		log.Fatal("Failed to connect to database. \n", err)
-	}
-	db.Logger = logger.Default.LogMode(logger.Info)
+	RunMigrations()
+}
 
-	// Migrate the schema for each table
-	type TableToMigrate struct {
-		Name   string
-		Schema interface{}
-	}
+// RunMigrations - running migrations function
+func RunMigrations() {
 	tablesToMigrate := []TableToMigrate{
 		{"admin", &model.User{}},
 		{"student", &model.User{}},
@@ -61,15 +73,12 @@ func ConnectDb() *gorm.DB {
 		// {"proxy", &Proxy{}},
 		// {"proxy_key", &ProxyKey{}},
 	}
-
-	log.Println("running migrations")
+	log.Println("Running migrations ...")
 	for _, table := range tablesToMigrate {
-		err := db.Table(table.Name).AutoMigrate(table.Schema)
+		err := DB.Table(table.Name).AutoMigrate(table.Schema)
 		if err != nil {
 			panic(fmt.Sprintf("migration of %s table failed: %v", table.Name, err))
 		}
 	}
-
-	fmt.Println("Database migration completed!")
-	return db
+	fmt.Println("Successfully running migrations")
 }

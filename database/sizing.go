@@ -12,8 +12,7 @@ import (
 // GetAllTemplates - getting all instance templates
 func GetAllTemplates() ([]model.Sizing, error) {
 	var templates []model.Sizing
-	db := ConnectDb()
-	db.Table("sizing").Find(&templates)
+	DB.Table("sizing").Find(&templates)
 	if len(templates) == 0 {
 		log.Println("Error: Could not get instance templates list")
 		return templates, errors.New("error: unable to list instance templates")
@@ -24,8 +23,7 @@ func GetAllTemplates() ([]model.Sizing, error) {
 // GetAllTemplatesID - getting all instance templates's ID
 func GetAllTemplatesID() ([]string, error) {
 	var templates []string
-	db := ConnectDb()
-	db.Table("sizing").Select("vmid").Find(&templates)
+	DB.Table("sizing").Select("vmid").Find(&templates)
 	if len(templates) == 0 {
 		log.Println("Error: Could not get instance templates's ID list")
 		return templates, errors.New("error: unable to list instances templates's ID")
@@ -36,8 +34,7 @@ func GetAllTemplatesID() ([]string, error) {
 // GetTemplate - getting instance template from given vmid
 func GetTemplate(vmid string) (model.Sizing, error) {
 	var template model.Sizing
-	db := ConnectDb()
-	db.Table("sizing").Where("vmid = ?", vmid).Find(&template)
+	DB.Table("sizing").Where("vmid = ?", vmid).Find(&template)
 	if template == (model.Sizing{}) {
 		log.Println("Error: Could not get instance template id :", vmid)
 		return template, fmt.Errorf("error: unable to get instance template id : %s", vmid)

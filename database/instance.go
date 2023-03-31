@@ -14,8 +14,7 @@ import (
 // GetAllInstancesByOwner - getting all instances
 func GetAllInstancesByOwner(ownerid string) ([]model.Instance, error) {
 	var instances []model.Instance
-	db := ConnectDb()
-	db.Table("instance").Where("ownerid = ?", ownerid).Find(&instances)
+	DB.Table("instance").Where("ownerid = ?", ownerid).Find(&instances)
 	if len(instances) == 0 {
 		log.Println("Error: Could not get instance list")
 		return instances, errors.New("error: unable to list instances")
@@ -26,8 +25,7 @@ func GetAllInstancesByOwner(ownerid string) ([]model.Instance, error) {
 // GetAllInstancesIDByOwner - getting all instances's ID by given owner ID
 func GetAllInstancesIDByOwner(ownerid string) ([]string, error) {
 	var instances []string
-	db := ConnectDb()
-	db.Table("instance").Select("vmid").Where("ownerid = ?", ownerid).Find(&instances)
+	DB.Table("instance").Select("vmid").Where("ownerid = ?", ownerid).Find(&instances)
 	if len(instances) == 0 {
 		log.Println("Error: Could not get instance's ID list from given owner ID")
 		return instances, errors.New("error: unable to list instances's ID from given owner ID")
@@ -38,8 +36,7 @@ func GetAllInstancesIDByOwner(ownerid string) ([]string, error) {
 // GetInstance - getting instance from given vmid
 func GetInstance(vmid string) (model.Instance, error) {
 	var instance model.Instance
-	db := ConnectDb()
-	db.Table("instance").Where("vmid = ?", vmid).Find(&instance)
+	DB.Table("instance").Where("vmid = ?", vmid).Find(&instance)
 	if instance == (model.Instance{}) {
 		log.Println("Error: Could not get instance id :", vmid)
 		return instance, fmt.Errorf("error: unable to get instance id : %s", vmid)
@@ -50,8 +47,7 @@ func GetInstance(vmid string) (model.Instance, error) {
 // GetInstanceTemplate - getting instance template from given vmid
 func GetInstanceTemplate(vmid string) (model.Instance, error) {
 	var instance model.Instance
-	db := ConnectDb()
-	db.Table("instance").Where("vmid = ? AND is_template = ?", vmid, true).Find(&instance)
+	DB.Table("instance").Where("vmid = ? AND is_template = ?", vmid, true).Find(&instance)
 	if instance == (model.Instance{}) {
 		log.Println("Error: Could not get instance template id :", vmid)
 		return instance, fmt.Errorf("error: unable to get instance template id : %s", vmid)
@@ -62,22 +58,19 @@ func GetInstanceTemplate(vmid string) (model.Instance, error) {
 // GetAllInstanceTemplatesIDByOwner - getting all instance templates's ID from given ownerid
 func GetAllInstanceTemplatesIDByOwner(ownerid string) []string {
 	var instances []string
-	db := ConnectDb()
-	db.Table("instance").Select("vmid").Where("ownerid = ? AND is_template = ?", ownerid, true).Find(&instances)
+	DB.Table("instance").Select("vmid").Where("ownerid = ? AND is_template = ?", ownerid, true).Find(&instances)
 	return instances
 }
 
 // GetAllInstanceTemplatesByOwner - getting all instance templates from given ownerid
 func GetAllInstanceTemplatesByOwner(ownerid string) []model.Instance {
 	var instances []model.Instance
-	db := ConnectDb()
-	db.Table("instance").Where("ownerid = ? AND is_template = ?", ownerid, true).Find(&instances)
+	DB.Table("instance").Where("ownerid = ? AND is_template = ?", ownerid, true).Find(&instances)
 	return instances
 }
 
 // CreateInstance - creating new instance
 func CreateInstance(vmid, ownerid, node, name string, spec model.VMSpec) (model.Instance, error) {
-	db := ConnectDb()
 	newInstance := model.Instance{
 		VMID:       vmid,
 		OwnerID:    ownerid,
@@ -95,7 +88,7 @@ func CreateInstance(vmid, ownerid, node, name string, spec model.VMSpec) (model.
 		return model.Instance{}, fmt.Errorf("error: could not create instance due to %s", err)
 	}
 	if checked {
-		if createErr := db.Table("instance").Create(&newInstance).Error; createErr != nil {
+		if createErr := DB.Table("instance").Create(&newInstance).Error; createErr != nil {
 			log.Println("Error: Could not create instance due to", createErr)
 			return newInstance, fmt.Errorf("error: could not create instance due to %s", createErr)
 		}
@@ -106,8 +99,7 @@ func CreateInstance(vmid, ownerid, node, name string, spec model.VMSpec) (model.
 
 // DeleteInstance - delete instance & decrease instance count in instance_limit by given vmid
 func DeleteInstance(vmid string) error {
-	db := ConnectDb()
-	if err := db.Table("instance").Where("vmid = ?", vmid).Delete(&model.Instance{}).Error; err != nil {
+	if err := DB.Table("instance").Where("vmid = ?", vmid).Delete(&model.Instance{}).Error; err != nil {
 		log.Println("Error: Could not delete instance due to", err)
 		return fmt.Errorf("error: could not delete instance due to %s", err)
 	}
@@ -116,8 +108,7 @@ func DeleteInstance(vmid string) error {
 
 // EditInstance - edit instance by given vmid
 func EditInstance(modifiedInstance model.Instance) error {
-	db := ConnectDb()
-	if err := db.Model(&model.Instance{}).Table("instance").Where("vmid = ?", modifiedInstance.VMID).Updates(&modifiedInstance).Error; err != nil {
+	if err := DB.Model(&model.Instance{}).Table("instance").Where("vmid = ?", modifiedInstance.VMID).Updates(&modifiedInstance).Error; err != nil {
 		log.Println("Error: Could not update instance :", modifiedInstance.VMID)
 		return fmt.Errorf("error: unable to update instance : %s", modifiedInstance.VMID)
 	}
@@ -126,8 +117,7 @@ func EditInstance(modifiedInstance model.Instance) error {
 
 // TemplateInstance - update column `is_template` to true
 func TemplateInstance(vmid string) error {
-	db := ConnectDb()
-	if err := db.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("is_template", true).Error; err != nil {
+	if err := DB.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("is_template", true).Error; err != nil {
 		log.Println("Error: Could not template instance :", vmid)
 		return fmt.Errorf("error: unable to template instance : %s", vmid)
 	}
@@ -136,8 +126,7 @@ func TemplateInstance(vmid string) error {
 
 // ResizeDisk - update column `max_disk` according to template's max_disk in GiB
 func ResizeDisk(vmid string, maxDisk float64) error {
-	db := ConnectDb()
-	if err := db.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("max_disk", maxDisk).Error; err != nil {
+	if err := DB.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("max_disk", maxDisk).Error; err != nil {
 		log.Println("Error: Could not resize disk of instance :", vmid)
 		return fmt.Errorf("error: unable to resize disk of instance : %s", vmid)
 	}
@@ -161,6 +150,21 @@ func CheckInstanceOwner(username, vmid string) (bool, error) {
 		return false, fmt.Errorf("user is not owner of the given VM : %s", vmid)
 	}
 	return true, nil
+}
+
+// IsInstanceTemplate - check that given VMID is instance template
+func IsInstanceTemplate(vmid string) (bool, error) {
+	instance, getInstanceErr := GetInstance(vmid)
+	if getInstanceErr != nil {
+		log.Printf("Error: Getting instance ID : %s from DB due to %s", vmid, getInstanceErr)
+		return false, getInstanceErr
+	}
+	if instance.IsTemplate {
+		log.Printf("VMID : %s is instance template", vmid)
+		return true, nil
+	}
+	log.Printf("Error: user is not owner of VM : %s", vmid)
+	return false, fmt.Errorf("user is not owner of the given VM : %s", vmid)
 }
 
 // CheckInstanceTemplateOwner - check vm's or template's owner of the given VMID

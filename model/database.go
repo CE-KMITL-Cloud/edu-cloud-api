@@ -29,18 +29,18 @@ type User struct {
 
 // CreateUserDB - create user in DB's body
 type CreateUserDB struct {
-	Username string `form:"username"`
-	Password string `form:"password"`
-	Name     string `form:"name"`
-	Group    string `form:"group"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+	Group    string `json:"group"`
 }
 
 // EditUserDB - edit user in DB's body
 type EditUserDB struct {
-	Password   string `form:"password"`
-	Name       string `form:"name"`
-	Status     bool   `form:"status"`
-	ExpireTime string `form:"expire_time"`
+	Password   string `json:"password"`
+	Name       string `json:"name"`
+	Status     bool   `json:"status"`
+	ExpireTime string `json:"expire_time"`
 }
 
 // InstanceLimit - struct for instance limit
@@ -54,10 +54,10 @@ type InstanceLimit struct {
 
 // EditInstanceLimit - struct for edit instance limit
 type EditInstanceLimit struct {
-	MaxCPU      float64 `form:"max_cpu"`
-	MaxRAM      float64 `form:"max_ram"`
-	MaxDisk     float64 `form:"max_disk"`
-	MaxInstance uint64  `form:"max_instance"`
+	MaxCPU      float64 `json:"max_cpu"`
+	MaxRAM      float64 `json:"max_ram"`
+	MaxDisk     float64 `json:"max_disk"`
+	MaxInstance uint64  `json:"max_instance"`
 }
 
 // Instance - struct for instance's info
@@ -109,7 +109,12 @@ type Pool struct {
 
 // CreatePoolBody - struct for create pool's request body
 type CreatePoolBody struct {
-	Owner string `form:"owner"`
-	Code  string `form:"code"`
-	Name  string `form:"name"`
+	Owner string `json:"owner"`
+	Code  string `json:"code"`
+	Name  string `json:"name"`
+}
+
+// AddPoolMemberBody - struct for add pool's members
+type AddPoolMemberBody struct {
+	Member []string `json:"members"`
 }

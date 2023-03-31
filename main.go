@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	database.ConnectDb()
+	database.Initialize()
 	app := fiber.New()
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key: config.GetFromENV("ENCRYPT_KEY"),
