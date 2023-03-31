@@ -116,5 +116,5 @@ type CreatePoolBody struct {
 
 // AddPoolMemberBody - struct for add pool's members
 type AddPoolMemberBody struct {
-	Member []string `json:"members"`
+	Member pq.StringArray `json:"members"`
 }

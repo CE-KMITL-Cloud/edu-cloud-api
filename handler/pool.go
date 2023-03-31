@@ -227,16 +227,8 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
 		}
 		// update pool member in DB
-		updateErr := database.EditPool(model.Pool{
-			ID:         pool.ID,
-			Owner:      pool.Owner,
-			Code:       pool.Code,
-			Name:       pool.Name,
-			VMID:       pool.VMID,
-			Member:     addMembersBody.Member,
-			CreateTime: pool.CreateTime,
-			ExpireTime: pool.ExpireTime,
-		})
+		addMembersBody.Member = append(addMembersBody.Member, pool.Member...)
+		updateErr := database.AddPoolMembers(pool.Code, pool.Owner, addMembersBody.Member)
 		if updateErr != nil {
 			log.Printf("Error: updating member of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating member of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})

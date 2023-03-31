@@ -8,6 +8,7 @@ import (
 
 	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/model"
+	"github.com/lib/pq"
 )
 
 // GetPoolsByOwner - getting all pools by given owner
@@ -58,11 +59,11 @@ func DeletePool(code, owner string) error {
 	return nil
 }
 
-// EditPool - edit pool by given code, owner
-func EditPool(modifiedPool model.Pool) error {
-	if err := DB.Model(&model.Instance{}).Table("pool").Where("code = ? AND owner = ?", modifiedPool.Code, modifiedPool.Owner).Updates(&modifiedPool).Error; err != nil {
-		log.Printf("Error: Could not update pool code : %s, owner : %s", modifiedPool.Code, modifiedPool.Owner)
-		return fmt.Errorf("error: unable to update pool code : %s, owner : %s", modifiedPool.Code, modifiedPool.Owner)
+// AddPoolMembers - edit pool by given code, owner
+func AddPoolMembers(code, owner string, members pq.StringArray) error {
+	if err := DB.Model(&model.Instance{}).Table("pool").Where("code = ? AND owner = ?", code, owner).UpdateColumn("member", members).Error; err != nil {
+		log.Printf("Error: Could not update pool code : %s, owner : %s", code, owner)
+		return fmt.Errorf("error: unable to update pool code : %s, owner : %s", code, owner)
 	}
 	return nil
 }

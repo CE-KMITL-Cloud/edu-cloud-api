@@ -80,5 +80,5 @@ func RunMigrations() {
 			panic(fmt.Sprintf("migration of %s table failed: %v", table.Name, err))
 		}
 	}
-	fmt.Println("Successfully running migrations")
+	log.Println("Successfully running migrations")
 }
