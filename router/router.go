@@ -31,6 +31,7 @@ func SetupRoutes(app *fiber.App) {
 	pool.Delete(":code/owner/:username", handler.DeletePoolDB)
 	pool.Get(":code/owner/:username/members/remain", handler.GetRemainStudents)
 	pool.Post(":code/owner/:username/members/add", handler.AddMembersPoolDB)
+	pool.Post(":code/owner/:username/instances/add", handler.AddInstancesPoolDB)
 
 	// Proxmox's Access
 	access := app.Group("/access")

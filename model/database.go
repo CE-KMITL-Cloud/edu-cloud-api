@@ -118,3 +118,8 @@ type CreatePoolBody struct {
 type AddPoolMemberBody struct {
 	Member pq.StringArray `json:"members"`
 }
+
+// AddPoolInstanceBody - struct for add pool's instance
+type AddPoolInstanceBody struct {
+	VMID string `json:"vmid"`
+}

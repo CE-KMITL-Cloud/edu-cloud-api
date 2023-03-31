@@ -226,6 +226,12 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 		if getPoolErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
 		}
+		for _, member := range addMembersBody.Member {
+			if config.Contains(pool.Member, member) {
+				log.Printf("Error: Found duplicate username: %s in given pool", member)
+				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's username: %s due to found duplicate user", member)})
+			}
+		}
 		// update pool member in DB
 		addMembersBody.Member = append(addMembersBody.Member, pool.Member...)
 		updateErr := database.AddPoolMembers(pool.Code, pool.Owner, addMembersBody.Member)
@@ -234,6 +240,54 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating member of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
 		}
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Added new members : %v in pool code : %s, owner : %s successfully", addMembersBody.Member, code, owner)})
+	}
+	log.Println("Error: user's group is not allowed to get pools")
+	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
+}
+
+// AddInstancesPoolDB - Add instance to specific pool
+/*
+	using Request Body
+	@vmid : adding vmid
+
+	using Params
+	@username : pool owner
+	@code : course code
+
+	using Query
+	@username : sender
+*/
+func AddInstancesPoolDB(c *fiber.Ctx) error {
+	addInstanceBody := new(model.AddPoolInstanceBody)
+	if err := c.BodyParser(addInstanceBody); err != nil {
+		log.Println("Error: Could not parse body parser to add pool's instance body")
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to add pool's instance body"})
+	}
+	sender := c.Query("username")
+	owner := c.Params("username")
+	code := c.Params("code")
+	group, getGroupErr := database.GetUserGroup(sender)
+	if getGroupErr != nil {
+		log.Println("Error: while getting user's group due to :", getGroupErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
+	}
+	if group == config.ADMIN || sender == owner {
+		pool, getPoolErr := database.GetPoolByCode(code, owner)
+		if getPoolErr != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
+		}
+		if !config.Contains(pool.VMID, addInstanceBody.VMID) {
+			// update pool member in DB
+			pool.VMID = append(pool.VMID, addInstanceBody.VMID)
+			updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)
+			if updateErr != nil {
+				log.Printf("Error: updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
+			}
+			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Added new instances : %v in pool code : %s, owner : %s successfully", addInstanceBody.VMID, code, owner)})
+		}
+		log.Printf("Error: Found duplicate VMID: %s in given pool", addInstanceBody.VMID)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's instance ID: %s due to found duplicate ID", addInstanceBody.VMID)})
 	}
 	log.Println("Error: user's group is not allowed to get pools")
 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})

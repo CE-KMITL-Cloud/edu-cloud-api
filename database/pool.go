@@ -68,6 +68,15 @@ func AddPoolMembers(code, owner string, members pq.StringArray) error {
 	return nil
 }
 
+// AddPoolInstances - edit pool by given code, owner
+func AddPoolInstances(code, owner string, instances pq.StringArray) error {
+	if err := DB.Model(&model.Instance{}).Table("pool").Where("code = ? AND owner = ?", code, owner).UpdateColumn("vmid", instances).Error; err != nil {
+		log.Printf("Error: Could not update pool code : %s, owner : %s", code, owner)
+		return fmt.Errorf("error: unable to update pool code : %s, owner : %s", code, owner)
+	}
+	return nil
+}
+
 // IsPoolMember - check is given username a one of pool's member
 func IsPoolMember(code, owner, username string) bool {
 	pool, getPoolErr := GetPoolByCode(code, owner)
