@@ -203,6 +203,7 @@ func DeleteUserDB(c *fiber.Ctx) error {
 	@status
 	@expire_time
 */
+// todo : check why could not change status from true -> false
 func UpdateUserDB(c *fiber.Ctx) error {
 	// Getting params from URL
 	username := c.Params("username")
@@ -215,8 +216,8 @@ func UpdateUserDB(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
 	}
 	if userGroup != config.ADMIN {
-		log.Println("Error: user's group is not allowed to create user")
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to create user due to user's group is not allowed"})
+		log.Println("Error: user's group is not allowed to update user")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to update user due to user's group is not allowed"})
 	}
 
 	// Getting request's body

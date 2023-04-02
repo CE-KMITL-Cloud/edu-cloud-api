@@ -12,6 +12,17 @@ import (
 	"github.com/lib/pq"
 )
 
+// GetAllPools - getting all pools
+func GetAllPools() ([]model.Pool, error) {
+	var pools []model.Pool
+	DB.Table("pool").Find(&pools)
+	if len(pools) == 0 {
+		log.Println("Error: Could not get pools")
+		return pools, errors.New("error: unable to list pools")
+	}
+	return pools, nil
+}
+
 // GetPoolsByOwner - getting all pools by given owner
 func GetPoolsByOwner(owner string) ([]model.Pool, error) {
 	var pools []model.Pool
@@ -33,8 +44,8 @@ func GetPoolByCode(code, owner string) (model.Pool, error) {
 	return pool, nil
 }
 
-// GetAllPools - getting all pools that user is member by given username
-func GetAllPools(member string) ([]model.Pool, error) {
+// GetAllPoolsByMember - getting all pools that user is member by given username
+func GetAllPoolsByMember(member string) ([]model.Pool, error) {
 	var pools []model.Pool
 	query := fmt.Sprintf("'%s' = ANY (\"member\")", member)
 	if err := DB.Table("pool").Where(query).Find(&pools).Error; err != nil || len(pools) == 0 {
@@ -104,17 +115,17 @@ func IsPoolMember(code, owner, username string) bool {
 }
 
 // IsPoolOwner - check is given username a one of pool's owner
-func IsPoolOwner(code, owner, username string) (bool, error) {
+func IsPoolOwner(code, owner, username string) bool {
 	pool, getPoolErr := GetPoolByCode(code, owner)
 	if getPoolErr != nil {
-		return false, fmt.Errorf("error: unable to list pool from given owner : %s, code : %s", owner, code)
+		return false
 	}
 	if pool.Owner == username {
 		log.Printf("Found user : %s is owner of pool which owner : %s, code : %s", username, owner, code)
-		return true, nil
+		return true
 	}
 	log.Printf("Not found user : %s is owner of pool which owner : %s, code : %s", username, owner, code)
-	return false, nil
+	return false
 }
 
 // PoolInstanceDuplicate - check given vmid is exist in specific pool

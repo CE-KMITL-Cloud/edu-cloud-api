@@ -330,7 +330,7 @@ func CloneVM(c *fiber.Ctx) error {
 	if !isSizingTemplate {
 		// get template from every pools that username is member
 		var poolInstances []string
-		pools, getPoolsErr := database.GetAllPools(username)
+		pools, getPoolsErr := database.GetAllPoolsByMember(username)
 		if getPoolsErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting pool templates list from DB due to %s", getPoolsErr)})
 		}
@@ -584,7 +584,7 @@ func GetTemplateList(c *fiber.Ctx) error {
 	}
 	// get template from every pools that username is member
 	var poolInstances []string
-	pools, getPoolsErr := database.GetAllPools(username)
+	pools, getPoolsErr := database.GetAllPoolsByMember(username)
 	if getPoolsErr != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting pool templates list from DB due to %s", getPoolsErr)})
 	}

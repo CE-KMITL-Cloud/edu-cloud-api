@@ -58,16 +58,17 @@ func GetPoolDB(c *fiber.Ctx) error {
 		log.Println("Error: while getting user's group due to :", getGroupErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
 	}
+	pool, getPoolErr := database.GetPoolByCode(code, owner)
+	if getPoolErr != nil {
+		log.Printf("Error: getting pool by given owner : %s, code : %s due to %s", owner, code, getPoolErr)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to getting pool due to %s", getPoolErr)})
+	}
+	isOwner := database.IsPoolOwner(code, owner, sender)
 	isMember := database.IsPoolMember(code, owner, sender)
-	if isMember || group == config.ADMIN {
-		pool, getPoolErr := database.GetPoolByCode(code, owner)
-		if getPoolErr != nil {
-			log.Printf("Error: getting pool by given owner : %s, code : %s due to %s", owner, code, getPoolErr)
-			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to getting pool due to %s", getPoolErr)})
-		}
+	if isMember || group == config.ADMIN || isOwner {
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": pool})
 	}
-	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to getting pool due to user is not member"})
+	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to getting pool due to user is not member or owner"})
 }
 
 // CreatePoolDB - Create pool
@@ -98,6 +99,14 @@ func CreatePoolDB(c *fiber.Ctx) error {
 	if getSenderGroupErr != nil {
 		log.Println("Error: while getting sender's group due to :", getSenderGroupErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting sender's group due to %s", getSenderGroupErr)})
+	}
+	// check duplicate pool
+	pools, _ := database.GetAllPools()
+	for _, pool := range pools {
+		if pool.Code == createBody.Code && pool.Owner == createBody.Owner {
+			log.Printf("Error: found pool code : %s, owner : %s exists", createBody.Code, createBody.Owner)
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to create pool due to found pool code : %s, owner : %s exists", createBody.Code, createBody.Owner)})
+		}
 	}
 	// only faculty and admin
 	if senderGroup != config.STUDENT && ownerGroup != config.STUDENT {
@@ -140,10 +149,7 @@ func DeletePoolDB(c *fiber.Ctx) error {
 		log.Println("Error: user's group is not allowed to get pools")
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
 	}
-	isOwner, isOwnerErr := database.IsPoolOwner(code, owner, sender)
-	if isOwnerErr != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to checking pool owner due to %s", isOwnerErr)})
-	}
+	isOwner := database.IsPoolOwner(code, owner, sender)
 	if isOwner || group == config.ADMIN {
 		deletePoolErr := database.DeletePool(code, owner)
 		if deletePoolErr != nil {
@@ -213,6 +219,16 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 		log.Println("Error: Could not parse body parser to add pool's members body")
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to add pool's members body"})
 	}
+	students, getStudentErr := database.GetAllStudentsUsername()
+	if getStudentErr != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting student list due to %s", getStudentErr)})
+	}
+	for _, student := range addMembersBody.Member {
+		if !config.Contains(students, student) {
+			log.Printf("Error: username: %s in adding list is not exist", student)
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's username: %s due to user not found", student)})
+		}
+	}
 	sender := c.Query("username")
 	owner := c.Params("username")
 	code := c.Params("code")
@@ -239,6 +255,7 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 			log.Printf("Error: updating member of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating member of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
 		}
+		log.Printf("Successfully added members : %v to pool code : %s, owner : %s", addMembersBody.Member, code, owner)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Added new members : %v in pool code : %s, owner : %s successfully", addMembersBody.Member, code, owner)})
 	}
 	log.Println("Error: user's group is not allowed to get pools")
@@ -294,6 +311,7 @@ func AddInstancesPoolDB(c *fiber.Ctx) error {
 				log.Printf("Error: updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
 			}
+			log.Printf("Successfully added template ID : %s to pool code : %s, owner : %s", addInstanceBody.VMID, code, owner)
 			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Added new instances : %v in pool code : %s, owner : %s successfully", addInstanceBody.VMID, code, owner)})
 		}
 		log.Printf("Error: Found duplicate VMID: %s in given pool", addInstanceBody.VMID)

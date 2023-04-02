@@ -122,9 +122,9 @@ func EditUser(username, group string, body *model.EditUserDB) error {
 		Username:   username,
 		Password:   body.Password, // need to see best's approach to encrypt password
 		Name:       body.Name,
-		Status:     true,
+		Status:     body.Status,
 		CreateTime: time.Now().UTC().Format("2006-01-02"),
-		ExpireTime: time.Now().UTC().AddDate(4, 0, 0).Format("2006-01-02"),
+		ExpireTime: body.ExpireTime,
 	}
 	if err := DB.Model(&model.User{}).Table(group).Where("username = ?", username).Updates(&modifiedUser).Error; err != nil {
 		log.Println("Error: Could not update username :", username)
