@@ -10,7 +10,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, dev]
     steps:
       - name: Make env file
-      - uses: SpicyPizza/create-envfile@v1.3
+        uses: SpicyPizza/create-envfile@v1.3
         with:
           envkey_PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
           envkey_PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
@@ -32,7 +32,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, prd]
     steps:
       - name: Make env file
-      - uses: SpicyPizza/create-envfile@v1.3
+        uses: SpicyPizza/create-envfile@v1.3
         with:
           envkey_PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
           envkey_PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
