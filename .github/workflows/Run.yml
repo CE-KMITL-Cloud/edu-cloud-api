@@ -12,14 +12,14 @@ jobs:
      - name: Make env file
      - uses: SpicyPizza/create-envfile@v1.3
       with:
-        PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
-        PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
-        ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }} 
-        DB_HOST: ${{ vars.DB_HOST }}
-        DB_PORT: ${{ vars.DB_PORT }}
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_PASS: ${{ secrets.DB_PASS }}       
-        DB_NAME: ${{ vars.DB_NAME }}        
+        envkey_PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
+        envkey_PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
+        envkey_ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }} 
+        envkey_DB_HOST: ${{ vars.DB_HOST }}
+        envkey_DB_PORT: ${{ vars.DB_PORT }}
+        envkey_DB_USER: ${{ secrets.DB_USER }}
+        envkey_DB_PASS: ${{ secrets.DB_PASS }}       
+        envkey_DB_NAME: ${{ vars.DB_NAME }}        
         file_name: .env
         fail_on_empty: false
       - uses: actions/checkout@v3
@@ -34,14 +34,14 @@ jobs:
      - name: Make env file
      - uses: SpicyPizza/create-envfile@v1.3
       with:
-        PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
-        PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
-        ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }} 
-        DB_HOST: ${{ vars.DB_HOST }}
-        DB_PORT: ${{ vars.DB_PORT }}
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_PASS: ${{ secrets.DB_PASS }}       
-        DB_NAME: ${{ vars.DB_NAME }}        
+        envkey_PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
+        envkey_PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
+        envkey_ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }} 
+        envkey_DB_HOST: ${{ vars.DB_HOST }}
+        envkey_DB_PORT: ${{ vars.DB_PORT }}
+        envkey_DB_USER: ${{ secrets.DB_USER }}
+        envkey_DB_PASS: ${{ secrets.DB_PASS }}       
+        envkey_DB_NAME: ${{ vars.DB_NAME }}        
         file_name: .env
         fail_on_empty: false
       - uses: actions/checkout@v3
