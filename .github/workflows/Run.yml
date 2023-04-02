@@ -6,9 +6,46 @@ on:
       - main
 
 jobs:
-  build:
+  RunDev:
     runs-on: [self-hosted, Linux, X64, dev]
     steps:
+      - name: Make env file
+        uses: SpicyPizza/create-envfile@v1.3
+        with:
+          envkey_PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
+          envkey_PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
+          envkey_ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }} 
+          envkey_DB_HOST: ${{ vars.DB_HOST }}
+          envkey_DB_PORT: ${{ vars.DB_PORT }}
+          envkey_DB_USER: ${{ secrets.DB_USER }}
+          envkey_DB_PASS: ${{ secrets.DB_PASS }}       
+          envkey_DB_NAME: ${{ vars.DB_NAME }}
+          directory: /home/dev/actions-runner/_work/edu-cloud-api/edu-cloud-api        
+          file_name: .env
+          fail_on_empty: false
+      - uses: actions/checkout@v3
+      - name: Build and Run App
+        run: docker compose up --force-recreate --build --detach
+      - name: Prune Docker Images
+        run: docker image prune -a -f
+
+  RunPrd:
+    runs-on: [self-hosted, Linux, X64, prd]
+    steps:
+      - name: Make env file
+        uses: SpicyPizza/create-envfile@v1.3
+        with:
+          envkey_PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
+          envkey_PROXMOX_API_KEY: ${{ secrets.PROXMOX_API_KEY }}
+          envkey_ENCRYPT_KEY: ${{ secrets.ENCRYPT_KEY }} 
+          envkey_DB_HOST: ${{ vars.DB_HOST }}
+          envkey_DB_PORT: ${{ vars.DB_PORT }}
+          envkey_DB_USER: ${{ secrets.DB_USER }}
+          envkey_DB_PASS: ${{ secrets.DB_PASS }}       
+          envkey_DB_NAME: ${{ vars.DB_NAME }}  
+          directory: /home/dev/actions-runner/_work/edu-cloud-api/edu-cloud-api       
+          file_name: .env
+          fail_on_empty: false
       - uses: actions/checkout@v3
       - name: Build and Run App
         run: docker compose up --force-recreate --build --detach
