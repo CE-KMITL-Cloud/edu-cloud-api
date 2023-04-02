@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux, X64, dev]
+    runs-on: [self-hosted, Linux, X64, dev, prd]
     steps:
       - uses: actions/checkout@v3
       - name: Build and Run App
