@@ -276,7 +276,12 @@ func AddInstancesPoolDB(c *fiber.Ctx) error {
 		if getPoolErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
 		}
-		if !config.Contains(pool.VMID, addInstanceBody.VMID) {
+		template, _ := database.IsInstanceTemplate(addInstanceBody.VMID)
+		if !template {
+			log.Printf("Error: Found duplicate VMID: %s in given pool", addInstanceBody.VMID)
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's instance ID: %s due to instance is not template", addInstanceBody.VMID)})
+		}
+		if !config.Contains(pool.VMID, addInstanceBody.VMID) && template {
 			// update pool member in DB
 			pool.VMID = append(pool.VMID, addInstanceBody.VMID)
 			updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)

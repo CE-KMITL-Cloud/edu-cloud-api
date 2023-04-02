@@ -44,6 +44,7 @@ func SetupRoutes(app *fiber.App) {
 	node := app.Group("/node")
 	// node.Get(":node/vm/list", handler.GetVMListByNode) // ! to be deprecated
 	node.Get(":node/vm/:vmid", handler.GetVM)
+	node.Get(":node/vm/:vmid/console", handler.GetVncConsole)
 
 	// VM
 	vm := app.Group("/vm")

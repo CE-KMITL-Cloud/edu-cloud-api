@@ -88,8 +88,7 @@ func GetFromENV(item string) string {
 
 // GetURL - Constructing Proxmox's API URL
 func GetURL(query string) string {
-	// hostURL := GetFromENV("PROXMOX_HOST")
-	hostURL := os.Getenv("PROXMOX_HOST")
+	hostURL := GetFromENV("PROXMOX_HOST")
 	u, _ := url.ParseRequestURI(hostURL)
 	u.Path = query
 	return u.String()

@@ -568,6 +568,7 @@ func GetTemplateList(c *fiber.Ctx) error {
 	if getTemplatesErr != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting sizing templates list from DB due to %s", getTemplatesErr)})
 	}
+	// todo : get template from every pools that username is member
 	// get templates from given username
 	list := database.GetAllInstanceTemplatesIDByOwner(username)
 	for _, template := range templateList {
@@ -745,4 +746,29 @@ func GetVncTicket(c *fiber.Ctx) error {
 	}
 	log.Printf("Finished getting VNC Proxy ticket from VMID : %s in %s", vmid, vncProxyBody.Node)
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": ticket})
+}
+
+// GetVncConsole - Get VNC console URL from given VMID
+/*
+	using Params
+	@node : node's name
+	@vmid : VM's ID
+
+	using Query
+	@username : account's username
+*/
+func GetVncConsole(c *fiber.Ctx) error {
+	vmid := c.Params("vmid")
+	node := c.Params("node")
+	username := c.Query("username")
+	owner, checkOwnerErr := database.CheckInstanceOwner(username, vmid)
+	if checkOwnerErr != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to %s", vmid, checkOwnerErr)})
+	}
+	if !owner {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed getting VMID : %s due to user is not owner of VM", vmid)})
+	}
+	consoleURL := config.GetFromENV("PROXMOX_HOST") + fmt.Sprintf("/?console=kvm&novnc=1&vmid=%s&vmname=&node=%s&resize=off&cmd=", vmid, node)
+	log.Printf("Finished getting VNC console URL from VMID : %s in %s", vmid, node)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": consoleURL})
 }
