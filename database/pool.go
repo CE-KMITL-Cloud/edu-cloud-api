@@ -2,6 +2,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -30,6 +31,17 @@ func GetPoolByCode(code, owner string) (model.Pool, error) {
 		return pool, fmt.Errorf("error: unable to list pool from given owner : %s, code : %s", owner, code)
 	}
 	return pool, nil
+}
+
+// GetAllPools - getting all pools that user is member by given username
+func GetAllPools(member string) ([]model.Pool, error) {
+	var pools []model.Pool
+	query := fmt.Sprintf("'%s' = ANY (\"member\")", member)
+	if err := DB.Table("pool").Where(query).Find(&pools).Error; err != nil || len(pools) == 0 {
+		log.Printf("Error: Could not get pools by given member's username")
+		return pools, errors.New("error: unable to list pools from given member's username")
+	}
+	return pools, nil
 }
 
 // CreatePool - creating pool

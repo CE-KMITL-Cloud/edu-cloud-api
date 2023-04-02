@@ -272,6 +272,11 @@ func AddInstancesPoolDB(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
 	}
 	if group == config.ADMIN || sender == owner {
+		// Check that user is owner of given VM
+		instanceTemplateOwner, _ := database.CheckInstanceTemplateOwner(sender, addInstanceBody.VMID)
+		if !instanceTemplateOwner && group != config.ADMIN {
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed cloning VMID : %s due to VM is not template or user is not owner", addInstanceBody.VMID)})
+		}
 		pool, getPoolErr := database.GetPoolByCode(code, owner)
 		if getPoolErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})

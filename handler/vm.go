@@ -328,8 +328,22 @@ func CloneVM(c *fiber.Ctx) error {
 	// able to clone only own template or sizing template except man who request is admin
 	isSizingTemplate, _ := database.IsSizingTemplate(vmid)
 	if !isSizingTemplate {
+		// get template from every pools that username is member
+		var poolInstances []string
+		pools, getPoolsErr := database.GetAllPools(username)
+		if getPoolsErr != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting pool templates list from DB due to %s", getPoolsErr)})
+		}
+		for _, pool := range pools {
+			for _, instance := range pool.VMID {
+				if !config.Contains(poolInstances, instance) {
+					poolInstances = append(poolInstances, instance)
+				}
+			}
+		}
+		log.Println(poolInstances)
 		instanceTemplateOwner, _ := database.CheckInstanceTemplateOwner(username, vmid)
-		if !instanceTemplateOwner && group != config.ADMIN {
+		if !instanceTemplateOwner && group != config.ADMIN && !config.Contains(poolInstances, vmid) {
 			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed cloning VMID : %s due to VM is not template or user is not owner", vmid)})
 		}
 	}
@@ -406,7 +420,7 @@ func CloneVM(c *fiber.Ctx) error {
 		}
 
 		// Waiting until cloning process has been completed
-		cloned := qemu.CheckStatus(target, newid, []string{"created", "stopped", "running"}, false, (time.Minute), time.Second, cookies)
+		cloned := qemu.CheckStatus(target, newid, []string{"created", "stopped", "running"}, false, (10 * time.Minute), time.Second, cookies)
 		if cloned {
 			// resize disk to sizing template's disk in DB
 			if isSizingTemplate {
@@ -568,11 +582,23 @@ func GetTemplateList(c *fiber.Ctx) error {
 	if getTemplatesErr != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting sizing templates list from DB due to %s", getTemplatesErr)})
 	}
-	// todo : get template from every pools that username is member
+	// get template from every pools that username is member
+	var poolInstances []string
+	pools, getPoolsErr := database.GetAllPools(username)
+	if getPoolsErr != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting pool templates list from DB due to %s", getPoolsErr)})
+	}
+	for _, pool := range pools {
+		for _, instance := range pool.VMID {
+			if !config.Contains(poolInstances, instance) {
+				poolInstances = append(poolInstances, instance)
+			}
+		}
+	}
 	// get templates from given username
 	list := database.GetAllInstanceTemplatesIDByOwner(username)
 	for _, template := range templateList {
-		if config.Contains(list, fmt.Sprint(template.VMID)) || config.Contains(templates, fmt.Sprint(template.VMID)) {
+		if config.Contains(list, fmt.Sprint(template.VMID)) || config.Contains(templates, fmt.Sprint(template.VMID)) || config.Contains(poolInstances, fmt.Sprint(template.VMID)) {
 			returnList = append(returnList, template)
 		}
 	}
