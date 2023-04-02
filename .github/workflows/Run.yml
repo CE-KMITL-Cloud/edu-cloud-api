@@ -19,7 +19,8 @@ jobs:
           envkey_DB_PORT: ${{ vars.DB_PORT }}
           envkey_DB_USER: ${{ secrets.DB_USER }}
           envkey_DB_PASS: ${{ secrets.DB_PASS }}       
-          envkey_DB_NAME: ${{ vars.DB_NAME }}        
+          envkey_DB_NAME: ${{ vars.DB_NAME }}
+          directory: /home/dev/actions-runner/_work/edu-cloud-api/edu-cloud-api        
           file_name: .env
           fail_on_empty: false
       - uses: actions/checkout@v3
@@ -41,7 +42,8 @@ jobs:
           envkey_DB_PORT: ${{ vars.DB_PORT }}
           envkey_DB_USER: ${{ secrets.DB_USER }}
           envkey_DB_PASS: ${{ secrets.DB_PASS }}       
-          envkey_DB_NAME: ${{ vars.DB_NAME }}        
+          envkey_DB_NAME: ${{ vars.DB_NAME }}  
+          directory: /home/dev/actions-runner/_work/edu-cloud-api/edu-cloud-api       
           file_name: .env
           fail_on_empty: false
       - uses: actions/checkout@v3
