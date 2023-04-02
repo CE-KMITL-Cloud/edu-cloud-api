@@ -3,27 +3,27 @@
 #    Computer Engineering, KMITL        #
 #########################################
 
-version: '3.5'
+version: "3.8"
 
 services:
   api:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     image: ce-cloud-api
-    container_name: api
+    container_name: ce-cloud-api
     env_file: .env
     environment:
       DB_HOST: db
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-      DB_NAME: ${DB_NAME} 
+      DB_NAME: ${DB_NAME}
     networks:
       - ce-cloud-network
     ports:
       - "3001:3001"
     volumes:
-      - ./app:/usr/src/app
+      - api-data:/usr/src/app
     depends_on:
       - db
 
@@ -43,6 +43,7 @@ services:
 
 volumes:
   postgres-db:
+  api-data:
 
 networks:
   ce-cloud-network:

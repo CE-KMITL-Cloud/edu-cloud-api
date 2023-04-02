@@ -1,0 +1,16 @@
+name: Platform API - Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux, X64, dev]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and Run App
+        run: docker compose up --force-recreate --build --detach
+      - name: Prune Docker Images
+        run: docker image prune -a -f
