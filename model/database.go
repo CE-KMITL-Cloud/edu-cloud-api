@@ -25,6 +25,7 @@ type User struct {
 	Status     bool
 	CreateTime string
 	ExpireTime string
+	Salt       string
 }
 
 // CreateUserDB - create user in DB's body
