@@ -26,6 +26,7 @@ const (
 	MatchNumber = `:(\d+)`
 	WorkerNode  = `work-[-]?\d[\d,]*[\.]?[\d{2}]*`
 	ENV_PATH    = ".env"
+	TIME_FORMAT = "2006-01-02"
 
 	// Create VM's Configuration
 	SCSIHW = "virtio-scsi-pci"
@@ -95,16 +96,15 @@ func GetURL(query string) string {
 }
 
 // SendRequest - Constructing HTTP client and Sending request
-func SendRequest(httpMethod, url string, data url.Values, cookies model.Cookies) (*http.Response, error) {
+func SendRequest(httpMethod, url string, data url.Values) (*http.Response, error) {
 	req, err := http.NewRequest(httpMethod, url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("Authorization", GetFromENV("PROXMOX_API_KEY"))
 	if data != nil {
 		req.Header.Add("Content-Type", URL_ENCODED)
 	}
-	req.AddCookie(&cookies.Cookie)
-	req.Header.Add(CSRF_TOKEN, cookies.CSRFPreventionToken.Value)
 
 	client := &http.Client{}
 	resp, sendErr := client.Do(req)

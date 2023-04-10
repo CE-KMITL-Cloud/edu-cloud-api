@@ -11,6 +11,13 @@ import (
 	"github.com/edu-cloud-api/model"
 )
 
+// GetAllInstances - getting all instances
+func GetAllInstances() []model.Instance {
+	var instances []model.Instance
+	DB.Table("instance").Find(&instances)
+	return instances
+}
+
 // GetAllInstancesByOwner - getting all instances
 func GetAllInstancesByOwner(ownerid string) ([]model.Instance, error) {
 	var instances []model.Instance
@@ -72,16 +79,18 @@ func GetAllInstanceTemplatesByOwner(ownerid string) []model.Instance {
 // CreateInstance - creating new instance
 func CreateInstance(vmid, ownerid, node, name string, spec model.VMSpec) (model.Instance, error) {
 	newInstance := model.Instance{
-		VMID:       vmid,
-		OwnerID:    ownerid,
-		Node:       node,
-		IsTemplate: false,
-		Name:       name,
-		MaxCPU:     spec.CPU,
-		MaxRAM:     config.BytetoGB(spec.Memory),
-		MaxDisk:    config.BytetoGB(spec.Disk),
-		CreateTime: time.Now().UTC().Format("2006-01-02"),
-		ExpireTime: time.Now().UTC().AddDate(0, 4, 0).Format("2006-01-02"),
+		VMID:         vmid,
+		OwnerID:      ownerid,
+		Node:         node,
+		IsTemplate:   false,
+		Name:         name,
+		MaxCPU:       spec.CPU,
+		MaxRAM:       config.BytetoGB(spec.Memory),
+		MaxDisk:      config.BytetoGB(spec.Disk),
+		CreateTime:   time.Now().UTC().Format(config.TIME_FORMAT),
+		ExpireTime:   time.Now().UTC().AddDate(0, 4, 0).Format(config.TIME_FORMAT),
+		WillBeExpire: false,
+		Expired:      false,
 	}
 	checked, err := CheckInstanceLimit(ownerid, spec)
 	if err != nil {
@@ -111,6 +120,24 @@ func EditInstance(modifiedInstance model.Instance) error {
 	if err := DB.Model(&model.Instance{}).Table("instance").Where("vmid = ?", modifiedInstance.VMID).Updates(&modifiedInstance).Error; err != nil {
 		log.Println("Error: Could not update instance :", modifiedInstance.VMID)
 		return fmt.Errorf("error: unable to update instance : %s", modifiedInstance.VMID)
+	}
+	return nil
+}
+
+// MarkWillBeExpired - mark VM as will be expired by given VMID
+func MarkWillBeExpired(vmid string) error {
+	if err := DB.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("will_be_expire", true).Error; err != nil {
+		log.Println("Error: Could not mark instance as will be expired ID :", vmid)
+		return fmt.Errorf("error: unable to mark instance as will be expired ID : %s", vmid)
+	}
+	return nil
+}
+
+// MarkInstanceExpired - mark VM as expired by given VMID
+func MarkInstanceExpired(vmid string) error {
+	if err := DB.Model(&model.Instance{}).Table("instance").Where("vmid = ?", vmid).UpdateColumn("expired", true).Error; err != nil {
+		log.Println("Error: Could not mark instance as expired ID :", vmid)
+		return fmt.Errorf("error: unable to mark instance as expired ID : %s", vmid)
 	}
 	return nil
 }

@@ -19,7 +19,7 @@ func GetAllUsersByGroup(group string) ([]model.User, error) {
 		log.Printf("Error: Could not get %s list", group)
 		return users, fmt.Errorf("error: unable to get %s list", group)
 	}
-	log.Println("Got user list from db :", users)
+	// log.Println("Got user list from db :", users)
 	return users, nil
 }
 
@@ -97,8 +97,8 @@ func CreateUserDB(body *model.CreateUserDB) (model.User, error) {
 		Password:   body.Password, // need to see best's approach to encrypt password
 		Name:       body.Name,
 		Status:     true,
-		CreateTime: time.Now().UTC().Format("2006-01-02"),
-		ExpireTime: time.Now().UTC().AddDate(4, 0, 0).Format("2006-01-02"),
+		CreateTime: time.Now().UTC().Format(config.TIME_FORMAT),
+		ExpireTime: time.Now().UTC().AddDate(4, 0, 0).Format(config.TIME_FORMAT),
 	}
 	if createErr := DB.Table(body.Group).Create(&newUser).Error; createErr != nil {
 		log.Println("Error: Could not create user due to", createErr)
@@ -123,12 +123,21 @@ func EditUser(username, group string, body *model.EditUserDB) error {
 		Password:   body.Password, // need to see best's approach to encrypt password
 		Name:       body.Name,
 		Status:     body.Status,
-		CreateTime: time.Now().UTC().Format("2006-01-02"),
+		CreateTime: time.Now().UTC().Format(config.TIME_FORMAT),
 		ExpireTime: body.ExpireTime,
 	}
 	if err := DB.Model(&model.User{}).Table(group).Where("username = ?", username).Updates(&modifiedUser).Error; err != nil {
 		log.Println("Error: Could not update username :", username)
 		return fmt.Errorf("error: unable to update username : %s", username)
+	}
+	return nil
+}
+
+// MarkUserExpired - mark user as expired by given username
+func MarkUserExpired(username, group string) error {
+	if err := DB.Model(&model.User{}).Table(group).Where("username = ?", username).UpdateColumn("status", false).Error; err != nil {
+		log.Println("Error: Could not mark user as expired :", username)
+		return fmt.Errorf("error: unable to mark user as expired : %s", username)
 	}
 	return nil
 }

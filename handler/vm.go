@@ -211,7 +211,7 @@ func CreateVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until creating process has been complete
-	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (time.Minute), time.Second, cookies)
+	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (time.Minute), time.Second)
 	if created {
 		// todo : pull mac addr
 		// todo : insert into proxy table
@@ -276,7 +276,7 @@ func DeleteVM(c *fiber.Ctx) error {
 	}
 
 	// Check that target VM has been deleted completely yet
-	deleted := qemu.DeleteCompletely(deleteBody.Node, vmid, cookies)
+	deleted := qemu.DeleteCompletely(deleteBody.Node, vmid)
 	if deleted {
 		log.Printf("Finished deleting VMID : %s in %s", vmid, deleteBody.Node)
 
@@ -356,7 +356,7 @@ func CloneVM(c *fiber.Ctx) error {
 	}
 
 	// Check VM Template from vmid
-	isTemplate := qemu.IsTemplate(node, vmid, cookies)
+	isTemplate := qemu.IsTemplate(node, vmid)
 	if isTemplate || group == config.ADMIN {
 		// Check spec of the VM before allocate node
 		vmGetURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
@@ -420,7 +420,7 @@ func CloneVM(c *fiber.Ctx) error {
 		}
 
 		// Waiting until cloning process has been completed
-		cloned := qemu.CheckStatus(target, newid, []string{"created", "stopped", "running"}, false, (10 * time.Minute), time.Second, cookies)
+		cloned := qemu.CheckStatus(target, newid, []string{"created", "stopped", "running"}, false, (10 * time.Minute), time.Second)
 		if cloned {
 			// resize disk to sizing template's disk in DB
 			if isSizingTemplate {
@@ -538,7 +538,7 @@ func CreateTemplate(c *fiber.Ctx) error {
 	}
 
 	// Waiting until templating process has been completed
-	templated := qemu.TemplateCompletely(templateBody.Node, vmid, []string{"created", "existing"}, cookies)
+	templated := qemu.TemplateCompletely(templateBody.Node, vmid, []string{"created", "existing"})
 	if templated {
 		updateErr := database.TemplateInstance(vmid)
 		if updateErr != nil {

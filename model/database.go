@@ -63,16 +63,18 @@ type EditInstanceLimit struct {
 
 // Instance - struct for instance's info
 type Instance struct {
-	VMID       string `gorm:"primaryKey;column:vmid"`
-	OwnerID    string `gorm:"column:ownerid"`
-	Node       string
-	Name       string
-	IsTemplate bool
-	MaxCPU     float64 // Amount of CPU limit
-	MaxRAM     float64 // Amount of RAM limit in GiB
-	MaxDisk    float64 // Amount of Disk limit in GiB
-	CreateTime string
-	ExpireTime string
+	VMID         string `gorm:"primaryKey;column:vmid"`
+	OwnerID      string `gorm:"column:ownerid"`
+	Node         string
+	Name         string
+	IsTemplate   bool
+	MaxCPU       float64 // Amount of CPU limit
+	MaxRAM       float64 // Amount of RAM limit in GiB
+	MaxDisk      float64 // Amount of Disk limit in GiB
+	CreateTime   string
+	ExpireTime   string
+	WillBeExpire bool
+	Expired      bool // true : expired
 }
 
 // InstanceBody - struct for instance's request body
@@ -106,6 +108,7 @@ type Pool struct {
 	Member     pq.StringArray `gorm:"type:text[]"`
 	CreateTime string
 	ExpireTime string
+	Status     bool
 }
 
 // CreatePoolBody - struct for create pool's request body

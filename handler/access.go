@@ -152,6 +152,14 @@ func DeleteUser(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting user's group due to %s", getGroupErr)})
 	}
 
+	// Deleting User in Proxmox
+	log.Printf("Deleting user : %s", username)
+	_, deleteErr := access.DeleteUser(deleteURL, cookies)
+	if deleteErr != nil {
+		log.Println("Error: Could not delete user :", deleteErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting user : %s due to %s", username, deleteErr)})
+	}
+
 	// Deleting User in DB
 	log.Printf("Deleting user : %s", username)
 	err := database.DeleteUserDB(username, group)
@@ -166,14 +174,6 @@ func DeleteUser(c *fiber.Ctx) error {
 	if deleteLimitErr != nil {
 		log.Println("Error: Could not delete user's instance limit in DB due to :", deleteLimitErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting user's instance limit : %s due to %s", username, deleteLimitErr)})
-	}
-
-	// Deleting User in Proxmox
-	log.Printf("Deleting user : %s", username)
-	_, deleteErr := access.DeleteUser(deleteURL, cookies)
-	if deleteErr != nil {
-		log.Println("Error: Could not delete user :", deleteErr)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting user : %s due to %s", username, deleteErr)})
 	}
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Deleting user %s successfully", username)})
 }

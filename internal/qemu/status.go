@@ -14,7 +14,7 @@ import (
 )
 
 // CheckStatus - for checking status of any process from given VM
-func CheckStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
+func CheckStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration) bool {
 	log.Printf("Checking VM status on %s in %s ...", vmid, node)
 	timeoutCh := time.After(timeout)
 	for {
@@ -24,22 +24,22 @@ func CheckStatus(node, vmid string, statuses []string, lock bool, timeout, sleep
 			return false
 		default:
 			vmStatusURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
-			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil, cookies)
+			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil)
 			if err != nil {
 				log.Println(err)
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusInternalServerError && resp.StatusCode != http.StatusOK {
-				log.Println("Error: with status", resp.Status)
-			}
+			// if resp.StatusCode != http.StatusInternalServerError && resp.StatusCode != http.StatusOK {
+			// 	log.Println("Error: with status", resp.Status)
+			// }
 
 			vm := model.VM{}
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				log.Println(readErr)
 			}
-			log.Println(string(body))
+			// log.Println(string(body))
 			if marshalErr := json.Unmarshal(body, &vm); marshalErr != nil {
 				log.Println(marshalErr)
 			}
@@ -66,7 +66,7 @@ func CheckStatus(node, vmid string, statuses []string, lock bool, timeout, sleep
 }
 
 // CheckQmpStatus - for checking QMP Status of any process from specific VM
-func CheckQmpStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration, cookies model.Cookies) bool {
+func CheckQmpStatus(node, vmid string, statuses []string, lock bool, timeout, sleepTime time.Duration) bool {
 	log.Println("Checking QMP Status ...")
 	timeoutCh := time.After(timeout)
 	for {
@@ -76,7 +76,7 @@ func CheckQmpStatus(node, vmid string, statuses []string, lock bool, timeout, sl
 			return false
 		default:
 			vmStatusURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
-			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil, cookies)
+			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil)
 			if err != nil {
 				log.Println(err)
 			}
@@ -117,7 +117,7 @@ func CheckQmpStatus(node, vmid string, statuses []string, lock bool, timeout, sl
 }
 
 // DeleteCompletely - for assuring that status of target VM has been deleted
-func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
+func DeleteCompletely(node, vmid string) bool {
 	log.Println("Checking delete status ...")
 
 	// Timeout - Default set to 1 min
@@ -129,7 +129,7 @@ func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 			return false
 		default:
 			vmStatusURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
-			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil, cookies)
+			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil)
 			if err != nil {
 				log.Println(err)
 			}
@@ -164,7 +164,7 @@ func DeleteCompletely(node, vmid string, cookies model.Cookies) bool {
 }
 
 // TemplateCompletely - for assuring that status of target VM has been templated
-func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cookies) bool {
+func TemplateCompletely(node, vmid string, statuses []string) bool {
 	log.Println("Checking template status ...")
 
 	// Timeout - Default set to 1 min
@@ -177,7 +177,7 @@ func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cook
 			return false
 		default:
 			vmStatusURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
-			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil, cookies)
+			resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil)
 			if err != nil {
 				log.Println(err)
 			}
@@ -218,7 +218,7 @@ func TemplateCompletely(node, vmid string, statuses []string, cookies model.Cook
 }
 
 // IsTemplate - Checking VM template from VMID
-func IsTemplate(node, vmid string, cookies model.Cookies) bool {
+func IsTemplate(node, vmid string) bool {
 	log.Println("Checking VM template from VMID ...")
 
 	// Timeout - Default set to 1 min
@@ -229,7 +229,7 @@ func IsTemplate(node, vmid string, cookies model.Cookies) bool {
 		return false
 	default:
 		vmStatusURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/status/current", node, vmid))
-		resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil, cookies)
+		resp, err := config.SendRequest(http.MethodGet, vmStatusURL, nil)
 		if err != nil {
 			log.Println(err)
 		}

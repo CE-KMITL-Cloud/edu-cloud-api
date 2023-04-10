@@ -25,6 +25,19 @@ func GetVM(url string, cookies model.Cookies) (model.VM, error) {
 	return info, nil
 }
 
+// GetVMUsingToken - GET /api2/json/nodes/{node}/qemu/{vmid}/status/current but using api token
+func GetVMUsingToken(url string) (model.VM, error) {
+	info := model.VM{}
+	body, err := config.SendRequestUsingToken(http.MethodGet, url, nil)
+	if err != nil {
+		return info, err
+	}
+	if marshalErr := json.Unmarshal(body, &info); marshalErr != nil {
+		return info, marshalErr
+	}
+	return info, nil
+}
+
 // GetVMConfig - GET /api2/json/nodes/{node}/qemu/{vmid}/config
 func GetVMConfig(url string, cookies model.Cookies) (model.VMConfig, error) {
 	info := model.VMConfig{}
@@ -105,6 +118,15 @@ func DeleteVM(url string, cookies model.Cookies) (model.VMResponse, error) {
 	return response, nil
 }
 
+// DeleteVMUsingToken - DELETE /api2/json/nodes/{node}/qemu/{vmid} but using api token
+func DeleteVMUsingToken(url string) error {
+	_, err := config.SendRequestUsingToken(http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CloneVM - POST /api2/json/nodes/{node}/qemu/{vmid}/clone
 func CloneVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
 	response := model.VMResponse{}
@@ -176,6 +198,22 @@ func PowerManagement(url string, data url.Values, cookies model.Cookies) (model.
 	return response, nil
 }
 
+// PowerManagementUsingToken - POST /api2/json/nodes/{node}/qemu/{vmid}/status/{action} but using api token
+/*
+	action : { start, stop, suspend, shutdown, resume, reset }
+*/
+func PowerManagementUsingToken(url string, data url.Values) (model.VMResponse, error) {
+	response := model.VMResponse{}
+	body, err := config.SendRequestUsingToken(http.MethodPost, url, data)
+	if err != nil {
+		return response, err
+	}
+	if marshalErr := json.Unmarshal(body, &response); marshalErr != nil {
+		return response, marshalErr
+	}
+	return response, nil
+}
+
 // EditVM - POST /api2/json/nodes/{node}/qemu/{vmid}/config
 func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMResponse, error) {
 	response := model.VMResponse{}
@@ -216,6 +254,7 @@ func ResizeDisk(url string, data url.Values, cookies model.Cookies) (model.VMRes
 }
 
 // RegenerateCloudinit - PUT /api2/json/nodes/{node}/qemu/{vmid}/cloudinit
+// ! to be deprecated
 func RegenerateCloudinit(url string, cookies model.Cookies) (model.VMResponse, error) {
 	response := model.VMResponse{}
 	body, err := config.SendRequestWithErr(http.MethodPut, url, nil, cookies)

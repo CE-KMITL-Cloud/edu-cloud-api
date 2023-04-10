@@ -66,7 +66,7 @@ func StartVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until starting process has been completed
-	started := qemu.CheckStatus(startBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
+	started := qemu.CheckStatus(startBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second)
 	if started {
 		log.Printf("Finished starting VMID : %s in %s", vmid, startBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been started", vmid, startBody.Node)})
@@ -126,7 +126,7 @@ func StopVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until stopping process has been completed
-	stopped := qemu.CheckStatus(stopBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), time.Second, cookies)
+	stopped := qemu.CheckStatus(stopBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), time.Second)
 	if stopped {
 		log.Printf("Finished stopping VMID : %s in %s", vmid, stopBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been stopped", vmid, stopBody.Node)})
@@ -191,7 +191,7 @@ func ShutdownVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until shutting down process has been completed
-	shutdown := qemu.CheckStatus(shutdownBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), (3 * time.Second), cookies)
+	shutdown := qemu.CheckStatus(shutdownBody.Node, vmid, []string{"stopped"}, false, (5 * time.Minute), (3 * time.Second))
 	if shutdown {
 		log.Printf("Finished shutting down VMID : %s in %s", vmid, shutdownBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been shut down", vmid, shutdownBody.Node)})
@@ -251,7 +251,7 @@ func SuspendVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until suspending process has been completed
-	suspended := qemu.CheckQmpStatus(suspendBody.Node, vmid, []string{"paused"}, false, (5 * time.Minute), time.Second, cookies)
+	suspended := qemu.CheckQmpStatus(suspendBody.Node, vmid, []string{"paused"}, false, (5 * time.Minute), time.Second)
 	if suspended {
 		log.Printf("Finished suspending VMID : %s in %s", vmid, suspendBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been suspended", vmid, suspendBody.Node)})
@@ -311,7 +311,7 @@ func ResumeVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until resuming process has been completed
-	resumed := qemu.CheckQmpStatus(resumeBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
+	resumed := qemu.CheckQmpStatus(resumeBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second)
 	if resumed {
 		log.Printf("Finished resuming VMID : %s in %s", vmid, resumeBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been resumed", vmid, resumeBody.Node)})
@@ -371,7 +371,7 @@ func ResetVM(c *fiber.Ctx) error {
 	}
 
 	// Waiting until resetting process has been completed
-	reset := qemu.CheckStatus(resetBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second, cookies)
+	reset := qemu.CheckStatus(resetBody.Node, vmid, []string{"running"}, false, (5 * time.Minute), time.Second)
 	if reset {
 		log.Printf("Finished resetting VMID : %s in %s", vmid, resetBody.Node)
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s in %s has been reset", vmid, resetBody.Node)})

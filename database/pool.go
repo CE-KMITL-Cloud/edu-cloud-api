@@ -63,8 +63,8 @@ func CreatePool(body *model.CreatePoolBody) (model.Pool, error) {
 		Name:       body.Name,
 		VMID:       []string{},
 		Member:     []string{},
-		CreateTime: time.Now().UTC().Format("2006-01-02"),
-		ExpireTime: time.Now().UTC().AddDate(0, 4, 0).Format("2006-01-02"),
+		CreateTime: time.Now().UTC().Format(config.TIME_FORMAT),
+		ExpireTime: time.Now().UTC().AddDate(0, 4, 0).Format(config.TIME_FORMAT),
 	}
 	if createErr := DB.Table("pool").Create(&newPool).Error; createErr != nil {
 		log.Println("Error: Could not create pool due to", createErr)
@@ -78,6 +78,15 @@ func DeletePool(code, owner string) error {
 	if err := DB.Table("pool").Where("code = ? AND owner = ?", code, owner).Delete(&model.Pool{}).Error; err != nil {
 		log.Println("Error: Could not delete pool due to", err)
 		return fmt.Errorf("error: could not delete pool due to %s", err)
+	}
+	return nil
+}
+
+// MarkPoolExpired - mark pool as expired by given ID
+func MarkPoolExpired(id uint64) error {
+	if err := DB.Model(&model.Pool{}).Table("pool").Where("id = ?", id).UpdateColumn("status", false).Error; err != nil {
+		log.Println("Error: Could not mark pool as expired ID :", id)
+		return fmt.Errorf("error: unable to mark pool as expired ID : %d", id)
 	}
 	return nil
 }
