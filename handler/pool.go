@@ -28,13 +28,37 @@ func GetPoolsDB(c *fiber.Ctx) error {
 		log.Println("Error: while getting user's group due to :", getGroupErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
 	}
-	if group != config.ADMIN {
-		log.Println("Error: user's group is not allowed to get pools")
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
+	if group == config.STUDENT || owner != sender {
+		log.Println("Error: user's group is not allowed or not owner to get pools")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed or not owner"})
 	}
 	pools, getPoolsErr := database.GetPoolsByOwner(owner)
 	if getPoolsErr != nil {
 		log.Printf("Error: getting pools by given owner : %s due to %s", owner, getPoolsErr)
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to getting pools due to %s", getPoolsErr)})
+	}
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": pools})
+}
+
+// GetPoolsByMemberDB - Get pools that sender is member
+/*
+	using Query
+	@username : sender
+*/
+func GetPoolsByMemberDB(c *fiber.Ctx) error {
+	sender := c.Query("username")
+	group, getGroupErr := database.GetUserGroup(sender)
+	if getGroupErr != nil {
+		log.Println("Error: while getting user's group due to :", getGroupErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
+	}
+	if group != config.STUDENT {
+		log.Println("Error: user's group is not allowed to get pools")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
+	}
+	pools, getPoolsErr := database.GetAllPoolsByMember(sender)
+	if getPoolsErr != nil {
+		log.Printf("Error: getting pools by given member : %s due to %s", sender, getPoolsErr)
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to getting pools due to %s", getPoolsErr)})
 	}
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": pools})
@@ -160,12 +184,6 @@ func DeletePoolDB(c *fiber.Ctx) error {
 	}
 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to deleting pool due to user is not owner"})
 }
-
-// // AddInstancePoolDB - Add vmid to specific pool
-// func AddInstancePoolDB(c *fiber.Ctx) error {
-// 	sender := c.Query("username")
-// 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Added new VMID : %s in pool code : %s, owner : %s successfully", vmid, code, owner)})
-// }
 
 // GetRemainStudents - Getting remain students who not in given pool
 /*

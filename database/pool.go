@@ -48,9 +48,9 @@ func GetPoolByCode(code, owner string) (model.Pool, error) {
 func GetAllPoolsByMember(member string) ([]model.Pool, error) {
 	var pools []model.Pool
 	query := fmt.Sprintf("'%s' = ANY (\"member\")", member)
-	if err := DB.Table("pool").Where(query).Find(&pools).Error; err != nil || len(pools) == 0 {
-		log.Printf("Error: Could not get pools by given member's username")
-		return pools, errors.New("error: unable to list pools from given member's username")
+	if err := DB.Table("pool").Where(query).Find(&pools).Error; err != nil {
+		log.Printf("Error: Could not get pools by given member's username : %s", member)
+		return pools, fmt.Errorf("error: unable to list pools from given member's username : %s", member)
 	}
 	return pools, nil
 }
@@ -63,6 +63,7 @@ func CreatePool(body *model.CreatePoolBody) (model.Pool, error) {
 		Name:       body.Name,
 		VMID:       []string{},
 		Member:     []string{},
+		Status:     true,
 		CreateTime: time.Now().UTC().Format(config.TIME_FORMAT),
 		ExpireTime: time.Now().UTC().AddDate(0, 4, 0).Format(config.TIME_FORMAT),
 	}

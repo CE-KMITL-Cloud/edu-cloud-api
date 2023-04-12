@@ -27,6 +27,7 @@ func SetupRoutes(app *fiber.App) {
 	pool := app.Group("pool")
 	pool.Get("/owner/:username", handler.GetPoolsDB)
 	pool.Get(":code/owner/:username", handler.GetPoolDB)
+	pool.Get("/list", handler.GetPoolsByMemberDB)
 	pool.Post("/create", handler.CreatePoolDB)
 	pool.Delete(":code/owner/:username", handler.DeletePoolDB)
 	pool.Get(":code/owner/:username/members/remain", handler.GetRemainStudents)

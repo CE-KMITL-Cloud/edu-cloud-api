@@ -9,6 +9,7 @@ import (
 	"github.com/edu-cloud-api/router"
 	"github.com/edu-cloud-api/schedule"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 )
 
@@ -18,6 +19,10 @@ func main() {
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key: config.GetFromENV("ENCRYPT_KEY"),
 	}))
+
+	// Add CORS middleware
+	app.Use(cors.New())
+
 	router.SetupRoutes(app)
 
 	// Set up a new cron job scheduler
