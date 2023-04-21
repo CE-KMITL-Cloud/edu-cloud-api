@@ -48,16 +48,15 @@ func GetTicket(c *fiber.Ctx) error {
 	c.Cookie(&fiber.Cookie{
 		Name:    config.AUTH_COOKIE,
 		Value:   ticket.Token.Cookie,
-		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
+		Expires: time.Now().Add(time.Hour * 12), // Set expire time to 4 hrs
 	})
 
 	// Set CSRF Prevention Token
 	c.Cookie(&fiber.Cookie{
 		Name:    config.CSRF_TOKEN,
 		Value:   ticket.Token.CSRFPreventionToken,
-		Expires: time.Now().Add(time.Hour * 4), // Set expire time to 4 hrs
+		Expires: time.Now().Add(time.Hour * 12), // Set expire time to 4 hrs
 	})
-
 	log.Printf("Finished getting ticket by user : %s", body.Username)
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Getting ticket from user %s successfully", body.Username)})
 }

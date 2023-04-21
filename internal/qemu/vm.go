@@ -228,9 +228,9 @@ func EditVM(url string, data url.Values, cookies model.Cookies) (model.VMRespons
 }
 
 // VncProxy - POST /api2/json/nodes/{node}/qemu/{vmid}/vncproxy
-func VncProxy(url string, cookies model.Cookies) (model.VncProxy, error) {
+func VncProxy(url string, data url.Values, cookies model.Cookies) (model.VncProxy, error) {
 	response := model.VncProxy{}
-	body, err := config.SendRequestWithErr(http.MethodPost, url, nil, cookies)
+	body, err := config.SendRequestWithErr(http.MethodPost, url, data, cookies)
 	if err != nil {
 		return response, err
 	}

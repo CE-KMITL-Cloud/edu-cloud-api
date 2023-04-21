@@ -125,12 +125,12 @@ func IsPoolMember(code, owner, username string) bool {
 }
 
 // IsPoolOwner - check is given username a one of pool's owner
-func IsPoolOwner(code, owner, username string) bool {
+func IsPoolOwner(code, owner, username, group string) bool {
 	pool, getPoolErr := GetPoolByCode(code, owner)
 	if getPoolErr != nil {
 		return false
 	}
-	if pool.Owner == username {
+	if pool.Owner == username || group == config.ADMIN {
 		log.Printf("Found user : %s is owner of pool which owner : %s, code : %s", username, owner, code)
 		return true
 	}

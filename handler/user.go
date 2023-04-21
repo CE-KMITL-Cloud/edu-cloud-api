@@ -81,6 +81,40 @@ func GetUsersDB(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": users})
 }
 
+// GetUsersDB - Get users from given group
+/*
+	using Params
+	@group
+
+	using Query
+	@username
+*/
+func GetStudentsDB(c *fiber.Ctx) error {
+	username := c.Query("username")
+
+	// Checking user's role
+	userGroup, getGroupErr := database.GetUserGroup(username)
+	if getGroupErr != nil {
+		log.Println("Error: while getting all students due to :", getGroupErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
+	}
+	if userGroup != config.ADMIN {
+		log.Println("Error: user's group is not allowed to get all students")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get all students due to user's group is not allowed"})
+	}
+
+	users, getUsersErr := database.GetAllUsersByGroup("student")
+	if getUsersErr != nil {
+		log.Printf("Error: Could not get all students due to : %s", getUsersErr)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting all students due to %s", getUsersErr)})
+	}
+	var students []string
+	for _, student := range users {
+		students = append(students, student.Username)
+	}
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": students})
+}
+
 // CreateUserDB - Create user in DB
 /*
 	using Query

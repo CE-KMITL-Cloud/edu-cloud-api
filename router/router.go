@@ -14,6 +14,7 @@ func SetupRoutes(app *fiber.App) {
 	// DB's User
 	user := app.Group("user")
 	user.Get("/group/:group", handler.GetUsersDB)
+	user.Get("/group/student/list", handler.GetStudentsDB)
 	user.Post("/create", handler.CreateUserDB) // create user, user's limit in DB
 	user.Get(":username", handler.GetUserDB)
 	user.Delete(":username/delete", handler.DeleteUserDB) // delete user, user's limit in DB

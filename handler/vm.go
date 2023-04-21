@@ -765,12 +765,17 @@ func GetVncTicket(c *fiber.Ctx) error {
 	}
 	cookies := config.GetCookies(c)
 	getVncTicketURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/vncproxy", vncProxyBody.Node, vmid))
-	ticket, getTicketErr := qemu.VncProxy(getVncTicketURL, cookies)
+	data := url.Values{}
+	data.Set("websocket", "0")
+	ticket, getTicketErr := qemu.VncProxy(getVncTicketURL, data, cookies)
 	if getTicketErr != nil {
 		log.Printf("Error: getting VNC Proxy ticket from VMID : %s in %s : %s", vmid, vncProxyBody.Node, getTicketErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting VNC Proxy ticket from VMID : %s in %s due to %s", vmid, vncProxyBody.Node, getTicketErr)})
 	}
 	log.Printf("Finished getting VNC Proxy ticket from VMID : %s in %s", vmid, vncProxyBody.Node)
+
+	ticket.Detail.Url = fmt.Sprintf("wss://edu.ce.kmitl.cloud/api2/json/nodes/%s/qemu/%s/vncwebsocket?port=%s&vncticket=%s", vncProxyBody.Node, vmid, ticket.Detail.Port, ticket.Detail.Ticket)
+
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": ticket})
 }
 

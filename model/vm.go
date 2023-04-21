@@ -130,4 +130,5 @@ type VncProxy struct {
 type VncProxyResponse struct {
 	Ticket string `json:"ticket"`
 	Port   string `json:"port"`
+	Url    string `json:"url"`
 }

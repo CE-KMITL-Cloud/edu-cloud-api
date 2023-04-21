@@ -87,7 +87,7 @@ func GetPoolDB(c *fiber.Ctx) error {
 		log.Printf("Error: getting pool by given owner : %s, code : %s due to %s", owner, code, getPoolErr)
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to getting pool due to %s", getPoolErr)})
 	}
-	isOwner := database.IsPoolOwner(code, owner, sender)
+	isOwner := database.IsPoolOwner(code, owner, sender, group)
 	isMember := database.IsPoolMember(code, owner, sender)
 	if isMember || group == config.ADMIN || isOwner {
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": pool})
@@ -173,14 +173,14 @@ func DeletePoolDB(c *fiber.Ctx) error {
 		log.Println("Error: user's group is not allowed to get pools")
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
 	}
-	isOwner := database.IsPoolOwner(code, owner, sender)
+	isOwner := database.IsPoolOwner(code, owner, sender, group)
 	if isOwner || group == config.ADMIN {
 		deletePoolErr := database.DeletePool(code, owner)
 		if deletePoolErr != nil {
 			log.Printf("Error: deleting pool by given owner : %s, code : %s due to %s", owner, code, deletePoolErr)
 			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to deleting pool due to %s", deletePoolErr)})
 		}
-		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target pool code : %s, owner : %s hasn't been deleted", code, owner)})
+		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target pool code : %s, owner : %s has been deleted", code, owner)})
 	}
 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to deleting pool due to user is not owner"})
 }
@@ -310,7 +310,7 @@ func AddInstancesPoolDB(c *fiber.Ctx) error {
 		// Check that user is owner of given VM
 		instanceTemplateOwner, _ := database.CheckInstanceTemplateOwner(sender, addInstanceBody.VMID)
 		if !instanceTemplateOwner && group != config.ADMIN {
-			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed cloning VMID : %s due to VM is not template or user is not owner", addInstanceBody.VMID)})
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed adding VMID : %s due to VM is not template or user is not owner", addInstanceBody.VMID)})
 		}
 		pool, getPoolErr := database.GetPoolByCode(code, owner)
 		if getPoolErr != nil {
