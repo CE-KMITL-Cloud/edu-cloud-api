@@ -57,8 +57,14 @@ func GetTicket(c *fiber.Ctx) error {
 		Value:   ticket.Token.CSRFPreventionToken,
 		Expires: time.Now().Add(time.Hour * 12), // Set expire time to 4 hrs
 	})
+
+	response := model.CookiesResponse{
+		PVEAuthToken:        ticket.Token.Cookie,
+		CSRFPreventionToken: ticket.Token.CSRFPreventionToken,
+	}
+
 	log.Printf("Finished getting ticket by user : %s", body.Username)
-	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Getting ticket from user %s successfully", body.Username)})
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": response})
 }
 
 // CreateUser - Create new user in Proxmox

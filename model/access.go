@@ -31,6 +31,12 @@ type Cookies struct {
 	CSRFPreventionToken fiber.Cookie
 }
 
+// CookiesResponse - struct for parsing Cookies as response
+type CookiesResponse struct {
+	PVEAuthToken        string
+	CSRFPreventionToken string
+}
+
 // CreateUserBody - struct for create user body in proxmox
 type CreateUserBody struct {
 	UserID   string `json:"userid"`
