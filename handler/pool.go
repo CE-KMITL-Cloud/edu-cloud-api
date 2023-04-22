@@ -260,14 +260,14 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 		if getPoolErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
 		}
-		for _, member := range addMembersBody.Member {
-			if config.Contains(pool.Member, member) {
-				log.Printf("Error: Found duplicate username: %s in given pool", member)
-				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's username: %s due to found duplicate user", member)})
-			}
-		}
+		// for _, member := range addMembersBody.Member {
+		// 	if config.Contains(pool.Member, member) {
+		// 		log.Printf("Error: Found duplicate username: %s in given pool", member)
+		// 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's username: %s due to found duplicate user", member)})
+		// 	}
+		// }
 		// update pool member in DB
-		addMembersBody.Member = append(addMembersBody.Member, pool.Member...)
+		// addMembersBody.Member = append(addMembersBody.Member, pool.Member...)
 		updateErr := database.AddPoolMembers(pool.Code, pool.Owner, addMembersBody.Member)
 		if updateErr != nil {
 			log.Printf("Error: updating member of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)

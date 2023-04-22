@@ -48,14 +48,14 @@ func GetTicket(c *fiber.Ctx) error {
 	c.Cookie(&fiber.Cookie{
 		Name:    config.AUTH_COOKIE,
 		Value:   ticket.Token.Cookie,
-		Expires: time.Now().Add(time.Hour * 12), // Set expire time to 4 hrs
+		Expires: time.Now().Add(time.Hour * 24), // Set expire time to 4 hrs
 	})
 
 	// Set CSRF Prevention Token
 	c.Cookie(&fiber.Cookie{
 		Name:    config.CSRF_TOKEN,
 		Value:   ticket.Token.CSRFPreventionToken,
-		Expires: time.Now().Add(time.Hour * 12), // Set expire time to 4 hrs
+		Expires: time.Now().Add(time.Hour * 24), // Set expire time to 4 hrs
 	})
 
 	response := model.CookiesResponse{

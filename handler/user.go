@@ -98,7 +98,7 @@ func GetStudentsDB(c *fiber.Ctx) error {
 		log.Println("Error: while getting all students due to :", getGroupErr)
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
 	}
-	if userGroup != config.ADMIN {
+	if userGroup == config.STUDENT {
 		log.Println("Error: user's group is not allowed to get all students")
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get all students due to user's group is not allowed"})
 	}
