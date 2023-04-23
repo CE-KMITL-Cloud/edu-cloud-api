@@ -4,21 +4,16 @@ package main
 import (
 	"log"
 
-	"github.com/edu-cloud-api/config"
 	"github.com/edu-cloud-api/database"
 	"github.com/edu-cloud-api/router"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 )
 
 func main() {
 	database.Initialize()
 	app := fiber.New()
-	app.Use(encryptcookie.New(encryptcookie.Config{
-		Key: config.GetFromENV("ENCRYPT_KEY"),
-	}))
 
 	// Configure CORS to allow credentials and set the allowed origin to your frontend URL
 	app.Use(cors.New(cors.Config{
