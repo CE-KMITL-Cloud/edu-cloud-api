@@ -314,6 +314,7 @@ func CloneVM(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to clone VM's body"})
 	}
 	cookies := config.GetCookies(c)
+
 	// getting data from query & Mapping values
 	username := c.Query("username")
 	node := c.Query("node")
@@ -404,12 +405,6 @@ func CloneVM(c *fiber.Ctx) error {
 		data.Set("full", "1") // ! fixed to `1` for full clone
 		log.Println("clone body :", data)
 
-		// Creating VM in DB
-		if _, createInstanceErr := database.CreateInstance(newid, username, target, cloneBody.Name, vmSpec); createInstanceErr != nil {
-			log.Printf("Error: Could not create VMID : %s in %s due to %s", newid, target, createInstanceErr)
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", newid, createInstanceErr)})
-		}
-
 		// Cloning VM in Proxmox
 		log.Printf("Cloning VMID : %s in %s", newid, target)
 		vmCloneURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu/%s/clone", node, vmid))
@@ -422,6 +417,13 @@ func CloneVM(c *fiber.Ctx) error {
 		// Waiting until cloning process has been completed
 		cloned := qemu.CheckStatus(target, newid, []string{"created", "stopped", "running"}, false, (10 * time.Minute), time.Second)
 		if cloned {
+
+			// Creating VM in DB
+			if _, createInstanceErr := database.CreateInstance(newid, username, target, cloneBody.Name, vmSpec); createInstanceErr != nil {
+				log.Printf("Error: Could not create VMID : %s in %s due to %s", newid, target, createInstanceErr)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", newid, createInstanceErr)})
+			}
+
 			// resize disk to sizing template's disk in DB
 			if isSizingTemplate {
 				log.Printf("Resizing VMID : %s in %s", newid, target)

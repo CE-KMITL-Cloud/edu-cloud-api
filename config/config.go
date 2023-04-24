@@ -206,14 +206,27 @@ func SendRequestUsingToken(httpMethod, url string, data url.Values) ([]byte, err
 
 // GetCookies - Getting PVE cookie & CSRF Prevention Token
 func GetCookies(c *fiber.Ctx) model.Cookies {
+	encodedCookie := c.Cookies(AUTH_COOKIE)
+	encodedCSRF := c.Cookies(CSRF_TOKEN)
+
+	decodedCookie, err := url.QueryUnescape(encodedCookie)
+	if err != nil {
+		log.Println("Error decoding cookie:", err)
+	}
+
+	decodedCSRF, err := url.QueryUnescape(encodedCSRF)
+	if err != nil {
+		log.Println("Error decoding CSRF:", err)
+	}
+
 	cookies := model.Cookies{
 		Cookie: http.Cookie{
 			Name:  AUTH_COOKIE,
-			Value: c.Cookies(AUTH_COOKIE),
+			Value: decodedCookie,
 		},
 		CSRFPreventionToken: fiber.Cookie{
 			Name:  CSRF_TOKEN,
-			Value: c.Cookies(CSRF_TOKEN),
+			Value: decodedCSRF,
 		},
 	}
 	return cookies
