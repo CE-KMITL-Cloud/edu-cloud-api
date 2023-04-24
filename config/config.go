@@ -229,6 +229,17 @@ func GetCookies(c *fiber.Ctx) model.Cookies {
 			Value: decodedCSRF,
 		},
 	}
+
+	// cookies := model.Cookies{
+	// 	Cookie: http.Cookie{
+	// 		Name:  AUTH_COOKIE,
+	// 		Value: c.Cookies(AUTH_COOKIE),
+	// 	},
+	// 	CSRFPreventionToken: fiber.Cookie{
+	// 		Name:  CSRF_TOKEN,
+	// 		Value: c.Cookies(CSRF_TOKEN),
+	// 	},
+	// }
 	return cookies
 }
 

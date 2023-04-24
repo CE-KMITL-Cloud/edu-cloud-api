@@ -119,6 +119,30 @@ func GetISOList(cookies model.Cookies) ([]string, error) {
 	return ISOList, nil
 }
 
+// GetNodes - Getting nodes
+// GET /api2/json/cluster/resources
+func GetNodes(cookies model.Cookies) ([]model.Node, error) {
+	log.Println("Getting node information from given node ...")
+	url := config.GetURL("/api2/json/cluster/resources")
+	nodeResource := model.NodeResource{}
+	body, err := config.SendRequestWithErr(http.MethodGet, url, nil, cookies)
+	if err != nil {
+		return []model.Node{}, err
+	}
+	if marshalErr := json.Unmarshal(body, &nodeResource); marshalErr != nil {
+		return []model.Node{}, marshalErr
+	}
+	// Regex and return only worker nodes
+	var nodeList []model.Node
+	for i := 0; i < len(nodeResource.Nodes); i++ {
+		r, _ := regexp.Compile(config.WorkerNode) // match node which start with work-{number}
+		if nodeResource.Nodes[i].Type == "node" && r.MatchString(nodeResource.Nodes[i].Node) {
+			nodeList = append(nodeList, nodeResource.Nodes[i])
+		}
+	}
+	return nodeList, nil
+}
+
 // GetNode - Getting node information from given name
 // GET /api2/json/cluster/resources
 func GetNode(name string, cookies model.Cookies) (model.Node, error) {

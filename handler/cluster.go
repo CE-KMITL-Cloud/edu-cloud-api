@@ -25,6 +25,19 @@ func GetNode(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": nodeInfo})
 }
 
+// GetNodes - Getting nodes information
+// GET /api2/json/cluster/resources
+func GetNodes(c *fiber.Ctx) error {
+	cookies := config.GetCookies(c)
+	log.Println("Getting Nodes ...")
+	nodes, err := cluster.GetNodes(cookies)
+	if err != nil {
+		log.Println("Error: from getting nodes info :", err)
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed getting nodes info due to %s", err)})
+	}
+	return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": nodes})
+}
+
 // GetStorageList - Getting RBD storage list
 // GET /api2/json/cluster/resources
 func GetStorageList(c *fiber.Ctx) error {

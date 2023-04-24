@@ -195,12 +195,6 @@ func CreateVM(c *fiber.Ctx) error {
 		}
 	}
 
-	// Creating VM in DB
-	if _, createInstanceErr := database.CreateInstance(vmid, username, target, createBody.Name, vmSpec); createInstanceErr != nil {
-		log.Printf("Error: Could not create VMID : %s in %s due to %s", vmid, target, createInstanceErr)
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", vmid, createInstanceErr)})
-	}
-
 	// Creating VM in Proxmox
 	vmCreateURL := config.GetURL(fmt.Sprintf("/api2/json/nodes/%s/qemu", target))
 	log.Printf("Creating VMID : %s in %s", vmid, target)
@@ -213,6 +207,12 @@ func CreateVM(c *fiber.Ctx) error {
 	// Waiting until creating process has been complete
 	created := qemu.CheckStatus(target, vmid, []string{"created", "starting", "running"}, true, (time.Minute), time.Second)
 	if created {
+		// Creating VM in DB
+		if _, createInstanceErr := database.CreateInstance(vmid, username, target, createBody.Name, vmSpec); createInstanceErr != nil {
+			log.Printf("Error: Could not create VMID : %s in %s due to %s", vmid, target, createInstanceErr)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Creating new VMID: %s has failed due to %s", vmid, createInstanceErr)})
+		}
+
 		// todo : pull mac addr
 		// todo : insert into proxy table
 		log.Printf("Finished creating VMID : %s in %s", vmid, target)
