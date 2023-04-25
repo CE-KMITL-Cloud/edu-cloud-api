@@ -127,3 +127,8 @@ type AddPoolMemberBody struct {
 type PoolInstanceBody struct {
 	VMID string `json:"vmid"`
 }
+
+// RemovePoolInstanceBody - struct for remove pool's instance
+type RemovePoolInstanceBody struct {
+	VMID pq.StringArray `json:"vmid"`
+}

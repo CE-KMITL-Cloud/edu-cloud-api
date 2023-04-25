@@ -352,7 +352,7 @@ func AddInstancesPoolDB(c *fiber.Ctx) error {
 	@username : sender
 */
 func RemoveInstancesPoolDB(c *fiber.Ctx) error {
-	removeInstanceBody := new(model.PoolInstanceBody)
+	removeInstanceBody := new(model.RemovePoolInstanceBody)
 	if err := c.BodyParser(removeInstanceBody); err != nil {
 		log.Println("Error: Could not parse body parser to add pool's instance body")
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": "Failed parsing body parser to add pool's instance body"})
@@ -366,28 +366,25 @@ func RemoveInstancesPoolDB(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting user's group due to %s", getGroupErr)})
 	}
 	if group == config.ADMIN || sender == owner {
-		// Check that user is owner of given VM
-		instanceTemplateOwner, _ := database.CheckInstanceTemplateOwner(sender, removeInstanceBody.VMID)
-		if !instanceTemplateOwner && group != config.ADMIN {
-			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed adding VMID : %s due to VM is not template or user is not owner", removeInstanceBody.VMID)})
-		}
+
 		pool, getPoolErr := database.GetPoolByCode(code, owner)
 		if getPoolErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
 		}
-		if config.Contains(pool.VMID, removeInstanceBody.VMID) {
-			// update pool member in DB
-			pool.VMID = config.FilterString(pool.VMID, removeInstanceBody.VMID)
-			updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)
-			if updateErr != nil {
-				log.Printf("Error: updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
+		for _, vmid := range removeInstanceBody.VMID {
+			if config.Contains(pool.VMID, vmid) {
+				// update pool member in DB
+				pool.VMID = config.FilterString(pool.VMID, vmid)
 			}
-			log.Printf("Successfully removed template ID : %s to pool code : %s, owner : %s", removeInstanceBody.VMID, code, owner)
-			return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Removed new instances : %v in pool code : %s, owner : %s successfully", removeInstanceBody.VMID, code, owner)})
+			log.Printf("Error: Not found VMID: %s in given pool", removeInstanceBody.VMID)
 		}
-		log.Printf("Error: Not found VMID: %s in given pool", removeInstanceBody.VMID)
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to remove pool's instance ID: %s due to not found template ID", removeInstanceBody.VMID)})
+		updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)
+		if updateErr != nil {
+			log.Printf("Error: updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
+		}
+		log.Printf("Successfully removed template ID : %s to pool code : %s, owner : %s", removeInstanceBody.VMID, code, owner)
+		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Removed new instances : %v in pool code : %s, owner : %s successfully", removeInstanceBody.VMID, code, owner)})
 	}
 	log.Println("Error: user's group is not allowed to get pools")
 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
