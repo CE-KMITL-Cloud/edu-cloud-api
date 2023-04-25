@@ -34,6 +34,17 @@ func GetPoolsByOwner(owner string) ([]model.Pool, error) {
 	return pools, nil
 }
 
+// GetPoolsByVMID - getting all pools by given VMID
+func GetPoolsByVMID(vmid string) ([]model.Pool, error) {
+	var pools []model.Pool
+	DB.Table("pool").Where("vmid @> ARRAY[?]::text[]", vmid).Find(&pools)
+	if len(pools) == 0 {
+		log.Printf("Error: Could not get pools by given vmid : %s", vmid)
+		return pools, fmt.Errorf("error: unable to list pools from given vmid : %s", vmid)
+	}
+	return pools, nil
+}
+
 // GetPoolByCode - getting pool by given course code, owner
 func GetPoolByCode(code, owner string) (model.Pool, error) {
 	var pool model.Pool

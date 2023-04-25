@@ -285,6 +285,23 @@ func DeleteVM(c *fiber.Ctx) error {
 			log.Printf("Error: Deleting instance ID : %s from DB due to %s", vmid, deleteInstanceErr)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed deleting instance ID : %s from DB due to %s", vmid, deleteInstanceErr)})
 		}
+
+		// Delete VM in Pool DB
+		pools, getPoolsErr := database.GetPoolsByVMID(vmid)
+		if getPoolsErr != nil {
+			log.Printf("Error: Getting pools from given vmid : %s from DB due to %s", vmid, getPoolsErr)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed removing instance ID : %s from pools DB due to %s", vmid, getPoolsErr)})
+		}
+		for _, pool := range pools {
+			pool.VMID = config.FilterString(pool.VMID, vmid)
+			updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)
+			if updateErr != nil {
+				log.Printf("Error: updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)
+				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
+			}
+			log.Printf("Successfully removed template ID : %s to pool code : %s, owner : %s", vmid, pool.Code, pool.Owner)
+		}
+
 		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Target VMID: %s has been deleted", vmid)})
 	}
 	log.Printf("Error: Could not delete VMID : %s in %s", vmid, deleteBody.Node)

@@ -263,3 +263,16 @@ func FilterList(list1, list2 []string) []string {
 	}
 	return filtered
 }
+
+// FilterString - compare string list with string
+func FilterString(list []string, str string) []string {
+	filtered := make([]string, 0, len(list))
+	for _, item := range list {
+		if item != str {
+			if !Contains(filtered, item) {
+				filtered = append(filtered, item)
+			}
+		}
+	}
+	return filtered
+}
