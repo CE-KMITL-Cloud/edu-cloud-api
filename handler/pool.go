@@ -244,7 +244,6 @@ func AddMembersPoolDB(c *fiber.Ctx) error {
 	for _, student := range addMembersBody.Member {
 		if !config.Contains(students, student) {
 			log.Printf("Error: username: %s in adding list is not exist", student)
-			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": fmt.Sprintf("Failed to add pool's username: %s due to user not found", student)})
 		}
 	}
 	sender := c.Query("username")
@@ -371,12 +370,16 @@ func RemoveInstancesPoolDB(c *fiber.Ctx) error {
 		if getPoolErr != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed to getting pool from given code, owner due to %s", getPoolErr)})
 		}
-		for _, vmid := range removeInstanceBody.VMID {
-			if config.Contains(pool.VMID, vmid) {
-				// update pool member in DB
-				pool.VMID = config.FilterString(pool.VMID, vmid)
+		if len(removeInstanceBody.VMID) == 0 {
+			pool.VMID = []string{}
+		} else {
+			for _, vmid := range removeInstanceBody.VMID {
+				if config.Contains(pool.VMID, vmid) {
+					// update pool member in DB
+					pool.VMID = config.FilterString(pool.VMID, vmid)
+				}
+				log.Printf("Error: Not found VMID: %s in given pool", removeInstanceBody.VMID)
 			}
-			log.Printf("Error: Not found VMID: %s in given pool", removeInstanceBody.VMID)
 		}
 		updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)
 		if updateErr != nil {
@@ -384,7 +387,7 @@ func RemoveInstancesPoolDB(c *fiber.Ctx) error {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Internal server error", "message": fmt.Sprintf("Failed updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)})
 		}
 		log.Printf("Successfully removed template ID : %s to pool code : %s, owner : %s", removeInstanceBody.VMID, code, owner)
-		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Removed new instances : %v in pool code : %s, owner : %s successfully", removeInstanceBody.VMID, code, owner)})
+		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": fmt.Sprintf("Edited instances : %v in pool code : %s, owner : %s successfully", removeInstanceBody.VMID, code, owner)})
 	}
 	log.Println("Error: user's group is not allowed to get pools")
 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed"})
