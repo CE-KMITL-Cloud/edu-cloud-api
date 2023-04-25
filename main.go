@@ -18,7 +18,7 @@ func main() {
 	// Configure CORS to allow credentials and set the allowed origin to your frontend URL
 	app.Use(cors.New(cors.Config{
 		AllowCredentials: true,
-		AllowOrigins:     "http://localhost:3000",
+		AllowOrigins:     "*",
 	}))
 
 	router.SetupRoutes(app)
