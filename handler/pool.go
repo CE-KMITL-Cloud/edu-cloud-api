@@ -32,6 +32,12 @@ func GetPoolsDB(c *fiber.Ctx) error {
 		log.Println("Error: user's group is not allowed or not owner to get pools")
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"status": "Bad request", "message": "Failed to get pools due to user's group is not allowed or not owner"})
 	}
+
+	if group == config.ADMIN {
+		pools, _ := database.GetAllPools()
+		return c.Status(http.StatusOK).JSON(fiber.Map{"status": "Success", "message": pools})
+	}
+
 	pools, getPoolsErr := database.GetPoolsByOwner(owner)
 	if getPoolsErr != nil {
 		log.Printf("Error: getting pools by given owner : %s due to %s", owner, getPoolsErr)
@@ -372,15 +378,18 @@ func RemoveInstancesPoolDB(c *fiber.Ctx) error {
 		}
 		if len(removeInstanceBody.VMID) == 0 {
 			pool.VMID = []string{}
-		} else {
-			for _, vmid := range removeInstanceBody.VMID {
-				if config.Contains(pool.VMID, vmid) {
-					// update pool member in DB
-					pool.VMID = config.FilterString(pool.VMID, vmid)
-				}
-				log.Printf("Error: Not found VMID: %s in given pool", removeInstanceBody.VMID)
-			}
 		}
+		// } else {
+		// 	for _, vmid := range removeInstanceBody.VMID {
+		// 		log.Println("pool vm", pool.VMID)
+		// 		if !config.Contains(pool.VMID, vmid) {
+		// 			log.Printf("Error: Not found VMID: %s in given pool", vmid)
+		// 		}
+		// 		// update pool member in DB
+		// 		log.Println("vmid", vmid)
+		// 		pool.VMID = config.FilterString(pool.VMID, vmid)
+		// 	}
+		// }
 		updateErr := database.AddPoolInstances(pool.Code, pool.Owner, pool.VMID)
 		if updateErr != nil {
 			log.Printf("Error: updating instances of pool code : %s, owner : %s due to %s", pool.Code, pool.Owner, updateErr)

@@ -290,7 +290,7 @@ func DeleteVM(c *fiber.Ctx) error {
 		pools, getPoolsErr := database.GetPoolsByVMID(vmid)
 		if getPoolsErr != nil {
 			log.Printf("Error: Getting pools from given vmid : %s from DB due to %s", vmid, getPoolsErr)
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed removing instance ID : %s from pools DB due to %s", vmid, getPoolsErr)})
+			// return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"status": "Failure", "message": fmt.Sprintf("Failed removing instance ID : %s from pools DB due to %s", vmid, getPoolsErr)})
 		}
 		for _, pool := range pools {
 			pool.VMID = config.FilterString(pool.VMID, vmid)
